@@ -108,19 +108,25 @@ class ProductListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role != User.DIRECTOR or user.role != User.ADMIN:
+        
+        # Faqat Admin va Director product yarata oladi
+        if user.role not in [User.ADMIN, User.DIRECTOR]:
             raise exceptions.PermissionDenied("Only Admin or Director can create products")
             
-        if not user.created_by:
-            raise exceptions.ValidationError(
-                "Unable to create product: Seller is not associated with an admin"
+        if user.role == User.DIRECTOR:
+            # Director o'zi uchun product yaratadi
+            serializer.save(
+                created_by=user,
+                admin=user  # Director o'zi admin bo'ladi
             )
-        
-        # Set the created_by and admin fields
-        serializer.save(
-            created_by=user,
-            admin=user.created_by
-        )
+        elif user.role == User.ADMIN:
+            if not user.created_by:
+                raise exceptions.PermissionDenied("Kallenga qotagim sani kim yaratgan ozi")
+            # Admin o'zi uchun product yaratadi
+            serializer.save(
+                created_by=user,
+                admin=user  # Admin o'zi admin bo'ladi
+            )
 
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
@@ -244,26 +250,21 @@ class SignUpView(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        role = request.data.get('role', User.SELLER).upper()  # Convert to uppercase
+        role = request.data.get('role', User.SELLER).upper()
 
-        # Check permissions based on user role
-        if user.role == User.DIRECTOR:
-            if role not in [User.ADMIN, User.SELLER]:
-                return Response({
-                    'status': 'error',
-                    'message': 'Director can only create admins or sellers'
-                }, status=status.HTTP_400_BAD_REQUEST)
-        elif user.role == User.ADMIN:
-            if role != User.SELLER:
-                return Response({
-                    'status': 'error',
-                    'message': 'Admin can only create sellers'
-                }, status=status.HTTP_400_BAD_REQUEST)
-        else:
+        # Faqat director user yarata oladi
+        if user.role != User.DIRECTOR:
             return Response({
                 'status': 'error',
-                'message': 'You do not have permission to create users'
+                'message': 'Only Director can create users'
             }, status=status.HTTP_403_FORBIDDEN)
+
+        # Director faqat ADMIN yoki SELLER yarata oladi
+        if role not in [User.ADMIN, User.SELLER]:
+            return Response({
+                'status': 'error',
+                'message': 'Director can only create admins or sellers'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         # Update request data with uppercase role
         request.data['role'] = role
@@ -272,7 +273,7 @@ class SignUpView(generics.CreateAPIView):
         if serializer.is_valid():
             new_user = serializer.save(
                 role=role,
-                created_by=request.user
+                created_by=request.user  # Director as creator
             )
             
             return Response({

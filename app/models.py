@@ -59,7 +59,7 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
-class Product(models.Model):
+class Product(BaseModel):
     AVAILABLE = 'AVAILABLE'
     NOT_AVAILABLE = 'NOT_AVAILABLE'
     LENT_OUT = 'LENT_OUT'
@@ -88,25 +88,11 @@ class Product(models.Model):
         on_delete=models.CASCADE,
         related_name='admin_products'
     )
-    lend_count = models.PositiveIntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+    lend_count = models.IntegerField(default=0)
+
     class Meta:
         ordering = ['-created_at']
-        
-    def clean(self):
-        if self.created_by.role != User.SELLER:
-            raise ValidationError("Products can only be created by Sellers")
-        if self.admin.role != User.ADMIN:
-            raise ValidationError("Product admin must be an Admin user")
-        if self.created_by.created_by != self.admin:
-            raise ValidationError("Product must be associated with the Seller's Admin")
-            
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
-        
+
     def __str__(self):
         return f"{self.name} ({self.get_status_display()})"
 
