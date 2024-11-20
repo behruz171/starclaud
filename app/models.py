@@ -40,14 +40,21 @@ class User(AbstractUser):
         ordering = ['username']
         
     def clean(self):
+        if User.objects.count() == 0:
+            return
+            
         if self.role == self.SELLER and (not self.created_by or self.created_by.role != self.ADMIN):
             raise ValidationError("Sellers must be created by an Admin")
         if self.role == self.ADMIN and (not self.created_by or self.created_by.role != self.DIRECTOR):
             raise ValidationError("Admins must be created by a Director")
             
     def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
+        if User.objects.count() == 0:
+            self.role = self.DIRECTOR
+            super().save(*args, **kwargs)
+        else:
+            self.clean()
+            super().save(*args, **kwargs)
         
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
