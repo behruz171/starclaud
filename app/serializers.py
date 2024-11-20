@@ -8,11 +8,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'password', 'role', 'admin']
         extra_kwargs = {
             'password': {'write_only': True},
-            'role': {'read_only': True}
         }
 
     def create(self, validated_data):
-        # Parolni hash qilish
         user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password'],

@@ -244,7 +244,7 @@ class SignUpView(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        role = request.data.get('role')
+        role = request.data.get('role', User.SELLER).upper()  # Convert to uppercase
 
         # Check permissions based on user role
         if user.role == User.DIRECTOR:
@@ -264,6 +264,9 @@ class SignUpView(generics.CreateAPIView):
                 'status': 'error',
                 'message': 'You do not have permission to create users'
             }, status=status.HTTP_403_FORBIDDEN)
+
+        # Update request data with uppercase role
+        request.data['role'] = role
 
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
