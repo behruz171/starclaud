@@ -1,0 +1,54 @@
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .models import User, Product, Lending
+
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'role', 'created_by', 'is_active')
+    list_filter = ('role', 'is_active')
+    search_fields = ('username', 'email')
+    
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
+        ('Permissions', {'fields': ('role', 'created_by', 'is_active')}),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            if request.user.role == User.DIRECTOR:
+                return qs
+            elif request.user.role == User.ADMIN:
+                return qs.filter(Q(created_by=request.user) | Q(pk=request.user.pk))
+        return qs
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'status', 'created_by', 'admin', 'lend_count')
+    list_filter = ('status', 'admin')
+    search_fields = ('name', 'description')
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            if request.user.role == User.ADMIN:
+                return qs.filter(admin=request.user)
+            elif request.user.role == User.SELLER:
+                return qs.filter(created_by=request.user)
+        return qs
+
+@admin.register(Lending)
+class LendingAdmin(admin.ModelAdmin):
+    list_display = ('product', 'seller', 'borrower_name', 'borrow_date', 'return_date', 'status')
+    list_filter = ('status', 'borrow_date')
+    search_fields = ('borrower_name', 'product__name')
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            if request.user.role == User.ADMIN:
+                return qs.filter(product__admin=request.user)
+            elif request.user.role == User.SELLER:
+                return qs.filter(seller=request.user)
+        return qs

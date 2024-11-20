@@ -1,0 +1,284 @@
+from rest_framework import viewsets, status, permissions, generics, exceptions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from .models import *
+from .serializers import *
+from django.db.models import Q
+
+class LoginView(TokenObtainPairView):
+    permission_classes = []
+    serializer_class = UserSerializer
+
+    def post(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
+        if not username or not password:
+            return Response({
+                'status': 'error',
+                'message': 'Username and password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            refresh = RefreshToken.for_user(user)
+            serializer = self.get_serializer(user)
+            
+            return Response({
+                'status': 'success',
+                'user': serializer.data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+            })
+        
+        return Response({
+            'status': 'error',
+            'message': 'Invalid credentials'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+class DashboardView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        user = self.get_object()
+        response_data = {
+            'user': self.get_serializer(user).data
+        }
+        
+        if user.role == User.DIRECTOR:
+            admins = User.objects.filter(role=User.ADMIN)
+            sellers = User.objects.filter(role=User.SELLER)
+            products = Product.objects.all()
+            
+            response_data.update({
+                'admins': UserSerializer(admins, many=True).data,
+                'sellers': UserSerializer(sellers, many=True).data,
+                'products': ProductSerializer(products, many=True).data
+            })
+            
+        elif user.role == User.ADMIN:
+            sellers = user.created_users.all()
+            products = Product.objects.filter(admin=user)
+            
+            response_data.update({
+                'sellers': UserSerializer(sellers, many=True).data,
+                'products': ProductSerializer(products, many=True).data
+            })
+            
+        elif user.role == User.SELLER:
+            own_products = Product.objects.filter(created_by=user)
+            admin_products = Product.objects.filter(admin=user.created_by)
+            lendings = Lending.objects.filter(seller=user)
+            
+            response_data.update({
+                'own_products': ProductSerializer(own_products, many=True).data,
+                'admin_products': ProductSerializer(admin_products, many=True).data,
+                'lendings': LendingSerializer(lendings, many=True).data
+            })
+        
+        return Response(response_data)
+
+class ProductListCreateView(generics.ListCreateAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == User.DIRECTOR:
+            return Product.objects.all()
+        elif user.role == User.ADMIN:
+            return Product.objects.filter(admin=user)
+        elif user.role == User.SELLER:
+            return Product.objects.filter(
+                Q(created_by=user) | 
+                Q(admin=user.created_by)
+            )
+        return Product.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role != User.DIRECTOR or user.role != User.ADMIN:
+            raise exceptions.PermissionDenied("Only Admin or Director can create products")
+            
+        if not user.created_by:
+            raise exceptions.ValidationError(
+                "Unable to create product: Seller is not associated with an admin"
+            )
+        
+        # Set the created_by and admin fields
+        serializer.save(
+            created_by=user,
+            admin=user.created_by
+        )
+
+class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == User.ADMIN:
+            return Product.objects.filter(admin=user)
+        elif user.role == User.SELLER:
+            return Product.objects.filter(
+                Q(created_by=user) | 
+                Q(admin=user.created_by)
+            )
+        return Product.objects.none()
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        product = self.get_object()
+
+        # Only creator can update their products
+        if product.created_by != user:
+            raise exceptions.PermissionDenied(
+                "You can only update your own products"
+            )
+        
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        
+        # Only creator can delete their products
+        if instance.created_by != user:
+            raise exceptions.PermissionDenied(
+                "You can only delete your own products"
+            )
+        
+        instance.delete()
+
+class ProductStatusUpdateView(generics.UpdateAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Product.objects.filter(created_by=self.request.user)
+
+    def patch(self, request, *args, **kwargs):
+        product = self.get_object()
+        new_status = request.data.get('status')
+        
+        if not new_status:
+            return Response({
+                'status': 'error',
+                'message': 'Status is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        if new_status not in [choice[0] for choice in Product.STATUS_CHOICES]:
+            return Response({
+                'status': 'error',
+                'message': 'Invalid status'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        product.status = new_status
+        product.save()
+        
+        return Response({
+            'status': 'success',
+            'product': self.get_serializer(product).data
+        })
+
+class LendingViewSet(viewsets.ModelViewSet):
+    serializer_class = LendingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == User.ADMIN or user.role == User.DIRECTOR:
+            return Lending.objects.filter(product__admin=user)
+        elif user.role == User.SELLER:
+            return Lending.objects.filter(seller=user)
+        return Lending.objects.none()
+
+    def perform_create(self, serializer):
+        if self.request.user.role != User.SELLER:
+            raise exceptions.PermissionDenied("Only sellers can create lendings")
+            
+        product = serializer.validated_data['product']
+        if product.status != Product.AVAILABLE:
+            raise serializers.ValidationError(
+                {"product": "Product is not available for lending"}
+            )
+            
+        if product.created_by != self.request.user:
+            raise exceptions.PermissionDenied(
+                "You can only lend your own products"
+            )
+            
+        serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def return_product(self, request, pk=None):
+        lending = self.get_object()
+        if lending.status == Lending.RETURNED:
+            return Response({
+                'status': 'error',
+                'message': 'Product is already returned'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        lending.status = Lending.RETURNED
+        lending.actual_return_date = request.data.get('return_date')
+        lending.save()
+        
+        return Response({
+            'status': 'success',
+            'lending': self.get_serializer(lending).data
+        })
+
+class SignUpView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        role = request.data.get('role')
+
+        # Check permissions based on user role
+        if user.role == User.DIRECTOR:
+            if role not in [User.ADMIN, User.SELLER]:
+                return Response({
+                    'status': 'error',
+                    'message': 'Director can only create admins or sellers'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        elif user.role == User.ADMIN:
+            if role != User.SELLER:
+                return Response({
+                    'status': 'error',
+                    'message': 'Admin can only create sellers'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+                'status': 'error',
+                'message': 'You do not have permission to create users'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            new_user = serializer.save(
+                role=role,
+                created_by=request.user
+            )
+            
+            return Response({
+                'status': 'success',
+                'message': f'{role.capitalize()} created successfully',
+                'user': UserSerializer(new_user).data
+            }, status=status.HTTP_201_CREATED)
+            
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
