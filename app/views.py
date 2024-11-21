@@ -98,7 +98,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
         if user.role == User.DIRECTOR:
             return Product.objects.all()
         elif user.role == User.ADMIN:
-            return Product.objects.filter(admin=user)
+            return Product.objects.filter(admin=user.created_by)
         elif user.role == User.SELLER:
             return Product.objects.filter(
                 Q(created_by=user) | 
@@ -108,25 +108,9 @@ class ProductListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        
-        # Faqat Admin va Director product yarata oladi
         if user.role not in [User.ADMIN, User.DIRECTOR]:
             raise exceptions.PermissionDenied("Only Admin or Director can create products")
-            
-        if user.role == User.DIRECTOR:
-            # Director o'zi uchun product yaratadi
-            serializer.save(
-                created_by=user,
-                admin=user  # Director o'zi admin bo'ladi
-            )
-        elif user.role == User.ADMIN:
-            if not user.created_by:
-                raise exceptions.PermissionDenied("Kallenga qotagim sani kim yaratgan ozi")
-            # Admin o'zi uchun product yaratadi
-            serializer.save(
-                created_by=user,
-                admin=user  # Admin o'zi admin bo'ladi
-            )
+        serializer.save()
 
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
@@ -250,9 +234,10 @@ class SignUpView(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        role = request.data.get('role', User.SELLER).upper()
+        role = request.data.get('role', '').upper()
 
         # Faqat director user yarata oladi
+        print(user.role)
         if user.role != User.DIRECTOR:
             return Response({
                 'status': 'error',
@@ -271,6 +256,7 @@ class SignUpView(generics.CreateAPIView):
 
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
+            # Har doim created_by = director
             new_user = serializer.save(
                 role=role,
                 created_by=request.user  # Director as creator

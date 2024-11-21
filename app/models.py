@@ -39,14 +39,14 @@ class User(AbstractUser):
     class Meta:
         ordering = ['username']
         
-    def clean(self):
-        if User.objects.count() == 0:
-            return
+    # def clean(self):
+    #     if User.objects.count() == 0:
+    #         return
             
-        if self.role == self.SELLER and (not self.created_by or self.created_by.role != self.ADMIN):
-            raise ValidationError("Sellers must be created by an Admin")
-        if self.role == self.ADMIN and (not self.created_by or self.created_by.role != self.DIRECTOR):
-            raise ValidationError("Admins must be created by a Director")
+    #     if self.role == self.SELLER and (not self.created_by or self.created_by.role != self.ADMIN):
+    #         raise ValidationError("Sellers must be created by an Admin")
+    #     if self.role == self.ADMIN and (not self.created_by or self.created_by.role != self.DIRECTOR):
+    #         raise ValidationError("Admins must be created by a Director")
             
     def save(self, *args, **kwargs):
         if User.objects.count() == 0:
