@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Product, Lending
+from .models import *
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -25,9 +25,13 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'status', 'created_by', 'admin', 'lend_count')
-    list_filter = ('status', 'admin')
-    search_fields = ('name', 'description')
+    list_display = ('name', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category')
+    list_filter = ('status', 'admin', 'category')
+    search_fields = ('name', 'description', 'category')
+    
+    fieldsets = (
+        (None, {'fields': ('name', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category')}),
+    )
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -52,3 +56,4 @@ class LendingAdmin(admin.ModelAdmin):
             elif request.user.role == User.SELLER:
                 return qs.filter(seller=request.user)
         return qs
+admin.site.register(Category)

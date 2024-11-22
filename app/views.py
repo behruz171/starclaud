@@ -237,7 +237,6 @@ class SignUpView(generics.CreateAPIView):
         role = request.data.get('role', '').upper()
 
         # Faqat director user yarata oladi
-        print(user.role)
         if user.role != User.DIRECTOR:
             return Response({
                 'status': 'error',
@@ -269,6 +268,25 @@ class SignUpView(generics.CreateAPIView):
             }, status=status.HTTP_201_CREATED)
             
         return Response({
-            'status': 'error',
+            'status': 'errorrr',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+class CategoryListCreateView(generics.ListCreateAPIView):
+    serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.role == User.DIRECTOR:
+            return Category.objects.filter(created_by=user)  # Director can see their own categories
+        elif user.role == User.ADMIN:
+            return Category.objects.filter(created_by=user.created_by)  # Admin can see categories created by their Director
+        elif user.role == User.SELLER:
+            return Category.objects.filter(created_by=user.created_by)  # Seller can see categories created by their Director
+        
+        return Category.objects.none()  # No categories for other roles
+
+    def perform_create(self, serializer):
+        serializer.save()

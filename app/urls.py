@@ -17,6 +17,9 @@ urlpatterns = [
     path('products/<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
     path('products/<int:pk>/status/', views.ProductStatusUpdateView.as_view(), name='product-status'),
     
+    # Category URLs
+    path('categories/', views.CategoryListCreateView.as_view(), name='category-list'),
+    
     # Include router URLs
     path('', include(router.urls)),
 ] 

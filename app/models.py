@@ -59,6 +59,20 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
+class Category(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='categories'
+    )
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
 class Product(BaseModel):
     AVAILABLE = 'AVAILABLE'
     NOT_AVAILABLE = 'NOT_AVAILABLE'
@@ -89,6 +103,13 @@ class Product(BaseModel):
         related_name='admin_products'
     )
     lend_count = models.IntegerField(default=0)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='products'
+    )
 
     class Meta:
         ordering = ['-created_at']

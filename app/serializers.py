@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Product, Lending
+from .models import User, Product, Lending, Category
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -16,7 +16,6 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'password', 'role', 'created_users']
         extra_kwargs = {
             'password': {'write_only': True},
-            'role': {'read_only': True}
         }
 
     def to_representation(self, instance):
@@ -42,8 +41,9 @@ class UserSerializer(serializers.ModelSerializer):
         # Faqat director user yarata oladi
         if request.user.role != User.DIRECTOR:
             raise serializers.ValidationError("Only Director can create users")
-
+        print(attrs)
         role = attrs.get('role', '').upper()
+        print(f"bu role - {role}")
         if role not in [User.ADMIN, User.SELLER]:
             raise serializers.ValidationError("Invalid role. Must be ADMIN or SELLER")
 
@@ -59,14 +59,27 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return user
 
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name']
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['created_by'] = user
+        return super().create(validated_data)
+
 class ProductSerializer(serializers.ModelSerializer):
     seller = serializers.CharField(source='created_by.username', read_only=True)
     admin = serializers.CharField(source='admin.username', read_only=True)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    category_name = serializers.CharField(source='category.name', read_only=True)
+
     
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'price', 'status', 
-                 'lend_count', 'seller', 'admin', 'created_at']
+                 'lend_count', 'seller', 'admin', 'created_at', 'category', 'category_name']
         read_only_fields = ['status', 'lend_count', 'created_at', 'seller', 'admin']
 
     def validate(self, attrs):
@@ -87,7 +100,7 @@ class ProductSerializer(serializers.ModelSerializer):
                     "Unable to create product: Admin must be associated with a director"
                 )
             validated_data['created_by'] = user
-            validated_data['admin'] = user.created_by  # Admin yaratgan director
+            validated_data['admin'] = user.created_by
             
         return super().create(validated_data)
 
