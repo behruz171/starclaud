@@ -290,3 +290,16 @@ class CategoryListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    serializer_class = CategorySerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == User.DIRECTOR:
+            return Category.objects.all()  # Directors can see all categories
+        elif user.role == User.ADMIN:
+            return Category.objects.filter(created_by=user.created_by)  # Admins see categories created by their director
+        elif user.role == User.SELLER:
+            return Category.objects.filter(created_by=user.created_by)  # Sellers see categories created by their director
+        return Category.objects.none()  # No categories for other roles

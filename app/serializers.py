@@ -9,7 +9,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     # admin = serializers.CharField(source='created_by.username', read_only=True)
-    created_users = UserListSerializer(many=True, read_only=True)  # Directorga bog'langan userlar
+    created_users = UserListSerializer(many=True, read_only=True)  # Users created by the director
     
     class Meta:
         model = User
@@ -51,13 +51,20 @@ class UserSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        user = User.objects.create_user(
+        user = self.context['request'].user
+        
+        # Ensure the user is a director to create other users
+        if user.role != User.DIRECTOR:
+            raise serializers.ValidationError("Only Director can create users")
+        
+        # Create the user and set the created_by field
+        new_user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password'],
             role=validated_data.get('role', User.SELLER),
-            created_by=validated_data.get('created_by')
+            created_by=user  # Set the creator as the director
         )
-        return user
+        return new_user
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,7 +73,22 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
-        validated_data['created_by'] = user
+        
+        # Check if the user is a seller
+        if user.role == User.SELLER:
+            raise serializers.ValidationError("Sellers cannot create categories.")
+        
+        # If the user is an admin, set created_by to the director who created the admin
+        if user.role == User.ADMIN:
+            if user.created_by:  # Assuming created_by is the director
+                validated_data['created_by'] = user.created_by
+            else:
+                raise serializers.ValidationError("Admin must be associated with a director.")
+        
+        # If the user is a director, set created_by to themselves
+        if user.role == User.DIRECTOR:
+            validated_data['created_by'] = user
+        
         return super().create(validated_data)
 
 class ProductSerializer(serializers.ModelSerializer):

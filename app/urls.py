@@ -19,6 +19,7 @@ urlpatterns = [
     
     # Category URLs
     path('categories/', views.CategoryListCreateView.as_view(), name='category-list'),
+    # path('category-view/', views.CategoryViewSet.as_view()),
     
     # Include router URLs
     path('', include(router.urls)),
