@@ -35,6 +35,19 @@ class User(AbstractUser):
         on_delete=models.SET_NULL,
         related_name='created_users'
     )
+    img = models.ImageField(upload_to='user_images/')
+    age = models.PositiveIntegerField(null=True)
+    gender = models.CharField(max_length=10)
+    work_start_time = models.CharField(max_length=20)
+    work_end_time = models.CharField(max_length=20)
+    AD = models.CharField(max_length=15)
+    JSHSHR = models.CharField(max_length=15)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    district = models.CharField(max_length=100, blank=True, null=True)
+    neighborhood = models.CharField(max_length=100, blank=True, null=True)
+    street = models.CharField(max_length=100,blank=True, null=True)
+    salary = models.DecimalField(max_digits=10, decimal_places=2, null=False, default=0.00)
+    KPI = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     class Meta:
         ordering = ['username']
@@ -83,6 +96,11 @@ class Product(BaseModel):
         (NOT_AVAILABLE, 'Not Available'),
         (LENT_OUT, 'Lent Out'),
     ]
+
+    CHOICE_OPTIONS = [
+        ('RENT', 'Rent'),
+        ('SELL', 'Sell'),
+    ]
     
     name = models.CharField(max_length=255)
     description = models.TextField()
@@ -110,6 +128,11 @@ class Product(BaseModel):
         blank=True,
         related_name='products'
     )
+    img = models.ImageField(upload_to='product_images/', null=False)
+    choice = models.CharField(max_length=4, choices=CHOICE_OPTIONS, null=False)
+    rental_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    quantity = models.PositiveIntegerField(default=1)
 
     class Meta:
         ordering = ['-created_at']

@@ -303,3 +303,38 @@ class CategoryViewSet(viewsets.ModelViewSet):
         elif user.role == User.SELLER:
             return Category.objects.filter(created_by=user.created_by)  # Sellers see categories created by their director
         return Category.objects.none()  # No categories for other roles
+
+class UserDetailView(generics.RetrieveAPIView):
+    serializer_class = UserDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        user_id = self.kwargs.get('id')  # URL dan id ni olish
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return None
+        
+        # Foydalanuvchining roliga qarab, kerakli foydalanuvchini qaytarish
+        if user.role == User.SELLER:
+            # Agar seller bo'lsa, o'zini, uni yaratgan direktor va direktor yaratgan adminlarni ko'rsatadi
+            print(user.created_by.created_by, "nimadir")
+            if user.created_by == self.request.user or user.created_by == self.request.user.created_by or user == self.request.user:
+                return user  # O'zini yoki uni yaratgan direktor/adminni ko'rsatadi
+        elif user.role == User.ADMIN:
+            # Agar admin bo'lsa, faqat o'zining direktorini ko'rsatadi
+            if user.created_by == self.request.user or user == self.request.user:
+                return user
+        elif user.role == User.DIRECTOR:
+            # Agar director bo'lsa, faqat o'zini ko'rsatadi
+            if user == self.request.user:
+                return user
+        
+        return None  # Boshqa hollarda None qaytarish
+
+    def retrieve(self, request, *args, **kwargs):
+        user = self.get_object()
+        if user is None:
+            return Response({'status': 'error', 'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response(self.get_serializer(user).data)

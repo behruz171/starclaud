@@ -7,6 +7,15 @@ class UserListSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "username", "role"]
 
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'role', 'img', 'age', 'gender', 
+                  'work_start_time', 'work_end_time', 'AD', 'JSHSHR', 
+                  'city', 'district', 'neighborhood', 'street', 
+                  'salary', 'KPI']
+        read_only_fields = fields
+
 class UserSerializer(serializers.ModelSerializer):
     # admin = serializers.CharField(source='created_by.username', read_only=True)
     created_users = UserListSerializer(many=True, read_only=True)  # Users created by the director
@@ -97,17 +106,23 @@ class ProductSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
     category_name = serializers.CharField(source='category.name', read_only=True)
 
-    
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'price', 'status', 
-                 'lend_count', 'seller', 'admin', 'created_at', 'category', 'category_name']
+                  'lend_count', 'seller', 'admin', 'created_at', 
+                  'category', 'category_name', 'img', 'choice', 
+                  'rental_price', 'location', 'quantity']
         read_only_fields = ['status', 'lend_count', 'created_at', 'seller', 'admin']
 
     def validate(self, attrs):
         user = self.context['request'].user
         if user.role not in [User.ADMIN, User.DIRECTOR]:
             raise serializers.ValidationError("Only Admin or Director can create products")
+        
+        # choice maydoni uchun tekshirish
+        if attrs.get('choice') not in dict(Product.CHOICE_OPTIONS):
+            raise serializers.ValidationError({"choice": "Invalid choice. Must be 'RENT' or 'SELL'."})
+
         return attrs
 
     def create(self, validated_data):

@@ -4,13 +4,13 @@ from .models import *
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'role', 'created_by', 'is_active')
+    list_display = ('username', 'email', 'role', 'created_by', 'is_active', 'age', 'gender', 'salary')
     list_filter = ('role', 'is_active')
     search_fields = ('username', 'email')
     
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
+        ('Personal info', {'fields': ('img', 'age', 'gender', 'work_start_time', 'work_end_time', 'AD', 'JSHSHR', 'city', 'district', 'neighborhood', 'street', 'salary', 'KPI')}),
         ('Permissions', {'fields': ('role', 'created_by', 'is_active')}),
     )
     
@@ -25,12 +25,13 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category')
-    list_filter = ('status', 'admin', 'category')
-    search_fields = ('name', 'description', 'category')
+    list_display = ('name', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category', 'img', 'choice', 'rental_price', 'location', 'quantity')
+    list_filter = ('status', 'admin', 'category', 'choice')
+    search_fields = ('name', 'description', 'category__name')
     
     fieldsets = (
-        (None, {'fields': ('name', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category')}),
+        (None, {'fields': ('name', 'description', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category')}),
+        ('Product Details', {'fields': ('img', 'choice', 'rental_price', 'location', 'quantity')}),
     )
     
     def get_queryset(self, request):
