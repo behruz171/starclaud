@@ -118,13 +118,13 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        if user.role == User.DIRECTOR:
+            return Product.objects.all()
         if user.role == User.ADMIN:
-            return Product.objects.filter(admin=user)
+            print("man shottaman")
+            return Product.objects.all()
         elif user.role == User.SELLER:
-            return Product.objects.filter(
-                Q(created_by=user) | 
-                Q(admin=user.created_by)
-            )
+            return Product.objects.all()
         return Product.objects.none()
 
     def perform_update(self, serializer):
