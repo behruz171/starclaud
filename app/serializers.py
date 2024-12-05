@@ -5,7 +5,7 @@ from .models import User, Product, Lending, Category
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "role"]
+        fields = ["id", "username", "role", "KPI", "salary"]
 
 class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:

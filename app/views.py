@@ -121,7 +121,6 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
         if user.role == User.DIRECTOR:
             return Product.objects.all()
         if user.role == User.ADMIN:
-            print("man shottaman")
             return Product.objects.all()
         elif user.role == User.SELLER:
             return Product.objects.all()
@@ -338,3 +337,15 @@ class UserDetailView(generics.RetrieveAPIView):
             return Response({'status': 'error', 'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
         return Response(self.get_serializer(user).data)
+
+class UserListView(generics.ListAPIView):
+    serializer_class = UserListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == User.DIRECTOR:
+            return User.objects.filter(created_by=user)  # DIRECTOR barcha foydalanuvchilarni ko'radi
+        elif user.role == User.ADMIN:
+            return User.objects.filter(created_by=user.created_by)  # ADMIN o'zining direktoriga tegishli foydalanuvchilarni ko'radi
+        return User.objects.none()  # Boshqa rollar uchun hech narsa ko'rsatilmaydi

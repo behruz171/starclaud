@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
-from .views import UserDetailView
+from .views import UserDetailView, UserListView
 
 router = DefaultRouter()
 router.register(r'lendings', views.LendingViewSet, basename='lending')
@@ -25,4 +25,5 @@ urlpatterns = [
     # Include router URLs
     path('', include(router.urls)),
     path('user/<int:id>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/', UserListView.as_view(), name='user-list'),
 ] 
