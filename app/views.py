@@ -95,16 +95,25 @@ class ProductListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        status_filter = self.request.query_params.get('status', None)  # URL dan status parametrini olish
+
+        queryset = Product.objects.all()  # Barcha mahsulotlarni olish
+
         if user.role == User.DIRECTOR:
-            return Product.objects.all()
+            # DIRECTOR barcha mahsulotlarni ko'radi
+            pass
         elif user.role == User.ADMIN:
-            return Product.objects.filter(admin=user.created_by)
+            queryset = queryset.filter(admin=user)  # ADMIN o'zining mahsulotlarini ko'radi
         elif user.role == User.SELLER:
-            return Product.objects.filter(
+            queryset = queryset.filter(
                 Q(created_by=user) | 
                 Q(admin=user.created_by)
-            )
-        return Product.objects.none()
+            )  # SELLER o'z mahsulotlarini va admin tomonidan yaratilgan mahsulotlarni ko'radi
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)  # Status bo'yicha filtr qo'shish
+
+        return queryset
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -251,7 +260,7 @@ class SignUpView(generics.CreateAPIView):
 
         # Update request data with uppercase role
         request.data['role'] = role
-
+        print(request.data)
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             # Har doim created_by = director
@@ -317,7 +326,6 @@ class UserDetailView(generics.RetrieveAPIView):
         # Foydalanuvchining roliga qarab, kerakli foydalanuvchini qaytarish
         if user.role == User.SELLER:
             # Agar seller bo'lsa, o'zini, uni yaratgan direktor va direktor yaratgan adminlarni ko'rsatadi
-            print(user.created_by.created_by, "nimadir")
             if user.created_by == self.request.user or user.created_by == self.request.user.created_by or user == self.request.user:
                 return user  # O'zini yoki uni yaratgan direktor/adminni ko'rsatadi
         elif user.role == User.ADMIN:

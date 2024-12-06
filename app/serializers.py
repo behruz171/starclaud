@@ -5,7 +5,7 @@ from .models import User, Product, Lending, Category
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "role", "KPI", "salary"]
+        fields = ["id","img","first_name" ,"username", "role", "KPI", "salary"]
 
 class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,7 +22,10 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'role', 'created_users']
+        fields = ['id', 'username', 'password', 'role', 'img', 'age', 'gender', 
+                  'work_start_time', 'work_end_time', 'AD', 'JSHSHR', 
+                  'city', 'district', 'neighborhood', 'street', 
+                  'salary', 'KPI', 'created_users']
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -61,8 +64,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
-        
         # Ensure the user is a director to create other users
+        print(validated_data)
         if user.role != User.DIRECTOR:
             raise serializers.ValidationError("Only Director can create users")
         
@@ -71,6 +74,22 @@ class UserSerializer(serializers.ModelSerializer):
             username=validated_data['username'],
             password=validated_data['password'],
             role=validated_data.get('role', User.SELLER),
+            first_name=validated_data.get('first_name',''),
+            last_name=validated_data.get('last_name',''),
+            img=validated_data.get('img', ''),
+            gender=validated_data.get('gender', ''),
+            work_start_time=validated_data.get('work_start_time', ''),
+            work_end_time=validated_data.get('work_end_time', ''),
+            age=validated_data.get('age', 0),
+            AD=validated_data.get('AD',''),
+            JSHSHR=validated_data.get('JSHSHR', ''),
+            city=validated_data.get('city', ''),
+            district=validated_data.get('district', ''),
+            neighborhood=validated_data.get('neighborhood', ''),
+            street=validated_data.get('street', ''),
+            salary=validated_data.get('salary',0),
+            KPI=validated_data.get("KPI", 0),
+
             created_by=user  # Set the creator as the director
         )
         return new_user

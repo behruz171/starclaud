@@ -46,7 +46,7 @@ class User(AbstractUser):
     district = models.CharField(max_length=100, blank=True, null=True)
     neighborhood = models.CharField(max_length=100, blank=True, null=True)
     street = models.CharField(max_length=100,blank=True, null=True)
-    salary = models.DecimalField(max_digits=10, decimal_places=2, null=False, default=0.00)
+    salary = models.DecimalField(max_digits=12, decimal_places=2, null=False, default=0.00)
     KPI = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     class Meta:
@@ -132,7 +132,7 @@ class Product(BaseModel):
     choice = models.CharField(max_length=4, choices=CHOICE_OPTIONS, null=False)
     rental_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     location = models.CharField(max_length=255, blank=True, null=True)
-    quantity = models.PositiveIntegerField(default=1)
+    quantity = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['-created_at']
@@ -143,10 +143,23 @@ class Product(BaseModel):
 class Lending(models.Model):
     LENT = 'LENT'
     RETURNED = 'RETURNED'
+
+    PERCENTAGE1 = '25%'
+    PERCENTAGE2 = '50%'
+    PERCENTAGE3 = '75%'
+    PERCENTAGE4 = '100%'
+
+    
     
     STATUS_CHOICES = [
         (LENT, 'Lent'),
         (RETURNED, 'Returned'),
+    ]
+    PERCENTAGE_CHOICES = [
+        (PERCENTAGE1, '25%'),
+        (PERCENTAGE2, '50%'),
+        (PERCENTAGE3, '75%'),
+        (PERCENTAGE4, '100%')
     ]
     
     product = models.ForeignKey(
@@ -163,19 +176,31 @@ class Lending(models.Model):
     borrow_date = models.DateField()
     return_date = models.DateField()
     actual_return_date = models.DateField(null=True, blank=True)
+    AD = models.CharField(max_length=15)
+    JSHSHR = models.CharField(max_length=15)
+    adress = models.CharField(max_length=100)
+    phone = models.CharField(max_length=12)
+    spare_phone = models.CharField(max_length=12)
+    percentage = models.CharField(
+        max_length=25,
+        choices=PERCENTAGE_CHOICES
+    )
+    const = models.CharField(max_length=100)
+    pledge = models.ImageField(upload_to='pledge_img')
+
+
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
         default=LENT
     )
-    
     class Meta:
         ordering = ['-borrow_date']
         
     def clean(self):
-        if self.seller.role != User.SELLER:
-            raise ValidationError("Only Sellers can create lending records")
-        if self.seller != self.product.created_by:
+        print(self.seller.created_by)
+        print(self.product.admin)
+        if self.seller != self.product.admin and self.seller.created_by != self.product.admin:
             raise ValidationError("Sellers can only lend their own products")
             
     def save(self, *args, **kwargs):
