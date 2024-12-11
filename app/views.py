@@ -195,6 +195,9 @@ class LendingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if not user.is_authenticated:  # Foydalanuvchi autentifikatsiya qilinganligini tekshirish
+           return Lending.objects.none()
+        
         if user.role == User.ADMIN or user.role == User.DIRECTOR:
             return Lending.objects.filter(product__admin=user)
         elif user.role == User.SELLER:
