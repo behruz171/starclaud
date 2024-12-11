@@ -167,7 +167,7 @@ class LendingSerializer(serializers.ModelSerializer):
         model = Lending
         fields = ['id', 'product', 'product_name', 'borrower_name', 
                  'borrow_date', 'return_date', 'actual_return_date', 'status']
-        read_only_fields = ['status']
+        # read_only_fields = ['status']
 
     def create(self, validated_data):
         user = self.context['request'].user

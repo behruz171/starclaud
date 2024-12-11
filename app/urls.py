@@ -1,12 +1,15 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
-from .views import UserDetailView, UserListView
 
 router = DefaultRouter()
 router.register(r'lendings', views.LendingViewSet, basename='lending')
 
 app_name = 'app'
+
+router = DefaultRouter()
+router.register(r'lendings', views.LendingViewSet, basename='lending')
+
 
 urlpatterns = [
     path('login/', views.LoginView.as_view(), name='login'),
@@ -17,6 +20,9 @@ urlpatterns = [
     path('products/', views.ProductListCreateView.as_view(), name='product-list'),
     path('products/<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
     path('products/<int:pk>/status/', views.ProductStatusUpdateView.as_view(), name='product-status'),
+
+    # Lending URL s
+    path('', include(router.urls)),
     
     # Category URLs
     path('categories/', views.CategoryListCreateView.as_view(), name='category-list'),
@@ -24,6 +30,6 @@ urlpatterns = [
     
     # Include router URLs
     path('', include(router.urls)),
-    path('user/<int:id>/', UserDetailView.as_view(), name='user-detail'),
-    path('users/', UserListView.as_view(), name='user-list'),
+    path('user/<int:id>/',views.UserDetailView.as_view(), name='user-detail'),
+    path('users/', views.UserListView.as_view(), name='user-list'),
 ] 

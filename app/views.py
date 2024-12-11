@@ -202,8 +202,8 @@ class LendingViewSet(viewsets.ModelViewSet):
         return Lending.objects.none()
 
     def perform_create(self, serializer):
-        if self.request.user.role != User.SELLER:
-            raise exceptions.PermissionDenied("Only sellers can create lendings")
+        # if self.request.user.role != User.SELLER:
+        #     raise exceptions.PermissionDenied("Only sellers can create lendings")
             
         product = serializer.validated_data['product']
         if product.status != Product.AVAILABLE:
@@ -211,11 +211,19 @@ class LendingViewSet(viewsets.ModelViewSet):
                 {"product": "Product is not available for lending"}
             )
             
-        if product.created_by != self.request.user:
+        if product.created_by != self.request.user and product.created_by.created_by != self.request.user:
             raise exceptions.PermissionDenied(
                 "You can only lend your own products"
             )
             
+        serializer.save()
+    
+    def perform_update(self, serializer):
+        # Statusni yangilash uchun qo'shimcha tekshirishlar
+        lending = self.get_object()
+        if lending.status == Lending.RETURNED:
+            raise exceptions.PermissionDenied("Cannot update a returned lending")
+        
         serializer.save()
 
     @action(detail=True, methods=['post'])
