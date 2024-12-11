@@ -378,3 +378,24 @@ class UserListView(generics.ListAPIView):
         elif user.role == User.ADMIN:
             return User.objects.filter(created_by=user.created_by)  # ADMIN o'zining direktoriga tegishli foydalanuvchilarni ko'radi
         return User.objects.none()  # Boshqa rollar uchun hech narsa ko'rsatilmaydi
+
+
+
+class SellerStatisticsView(generics.RetrieveAPIView):
+    serializer_class = SellerStatisticsSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        user_id = self.kwargs.get('id')  # Get the seller ID from the URL
+        try:
+            user = User.objects.get(id=user_id, role=User.SELLER)
+        except User.DoesNotExist:
+            return None
+        return user
+
+    def retrieve(self, request, *args, **kwargs):
+        seller = self.get_object()
+        if seller is None:
+            return Response({'status': 'error', 'message': 'Seller not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response(self.get_serializer(seller).data)

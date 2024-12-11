@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from decimal import Decimal
 from .models import User, Product, Lending, Category
+from django.db.models import Sum
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -234,3 +235,39 @@ class LendingSerializer(serializers.ModelSerializer):
                 return None
         return None
   
+
+
+class SellerStatisticsSerializer(serializers.ModelSerializer):
+    products_sold = serializers.SerializerMethodField()
+    lendings_count = serializers.SerializerMethodField()
+    total_sold_price = serializers.SerializerMethodField()
+    total_rental_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'salary', 'products_sold', 'lendings_count', 'total_sold_price', 'total_rental_price']
+
+    def get_products_sold(self, obj):
+        # Count only products with choice 'SELL'
+        return obj.products.filter(choice='SELL').count()  # Count of products created by the seller with choice 'SELL'
+
+    def get_lendings_count(self, obj):
+        return obj.lendings.count()
+    
+    def get_total_sold_price(self, obj):
+        # Calculate the total price of products with choice 'SELL'
+        total_price = obj.products.filter(choice='SELL').aggregate(total_price=Sum('price'))['total_price'] or 0
+        
+        # Calculate the amount after applying the KPI percentage
+        kpi_percentage = obj.KPI  # Assuming KPI is stored as a percentage (e.g., 20 for 20%)
+        discount_amount = (total_price * kpi_percentage) / 100  # Calculate the discount based on KPI
+        return total_price + discount_amount
+    
+    def get_total_rental_price(self, obj):
+        # Calculate the total rental price from lendings
+        total_rental_price = obj.lendings.aggregate(total_rental_price=Sum('product__rental_price'))['total_rental_price'] or 0
+        
+        # Calculate the amount after applying the KPI percentage
+        kpi_percentage = obj.KPI  # Assuming KPI is stored as a percentage (e.g., 20 for 20%)
+        discount_amount = (total_rental_price * kpi_percentage) / 100  # Calculate the discount based on KPI
+        return total_rental_price + discount_amount  # Return the total rental price after discount
