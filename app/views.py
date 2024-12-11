@@ -237,14 +237,24 @@ class LendingViewSet(viewsets.ModelViewSet):
                 'status': 'error',
                 'message': 'Product is already returned'
             }, status=status.HTTP_400_BAD_REQUEST)
-            
+        
+        # Mahsulotni qaytarish
         lending.status = Lending.RETURNED
         lending.actual_return_date = request.data.get('return_date')
         lending.save()
-        
+
+        # Mahsulotning statusini AVAILABLE ga o'zgartirish
+        product = lending.product
+        product.status = Product.AVAILABLE
+        product.save()
+
         return Response({
             'status': 'success',
-            'lending': self.get_serializer(lending).data
+            'lending': self.get_serializer(lending).data,
+            'product': {
+                'id': product.id,
+                'status': product.status
+            }
         })
 
 class SignUpView(generics.CreateAPIView):

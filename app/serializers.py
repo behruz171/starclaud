@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from decimal import Decimal
 from .models import User, Product, Lending, Category
 
 
@@ -160,16 +161,76 @@ class ProductSerializer(serializers.ModelSerializer):
             
         return super().create(validated_data)
 
+class LendingProductDetailsSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source="category.name")
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'img', 'category', 'rental_price']
+
+
 class LendingSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    
+    product = LendingProductDetailsSerializer(read_only=True)
+    remaining_percentage = serializers.SerializerMethodField()  # Qolgan foiz
+    amount_given = serializers.SerializerMethodField()  # Berilgan summa
+    amount_remaining = serializers.SerializerMethodField()  # Qolgan summa
+
     class Meta:
         model = Lending
-        fields = ['id', 'product', 'product_name', 'borrower_name', 
-                 'borrow_date', 'return_date', 'actual_return_date', 'status']
-        # read_only_fields = ['status']
+        fields = [
+            'id', 
+            'product', 
+            'borrower_name', 
+            'borrow_date', 
+            'return_date', 
+            'actual_return_date', 
+            'pledge',
+            'const',
+            'status', 
+            'percentage', 
+            'remaining_percentage', 
+            'amount_given', 
+            'amount_remaining'
+        ]
+        read_only_fields = ['status']
 
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['seller'] = user
-        return super().create(validated_data) 
+        return super().create(validated_data)
+
+    def get_remaining_percentage(self, obj):
+        if obj.percentage:
+            percentage_str = obj.percentage.replace('%', '').strip()
+            try:
+                percentage = int(percentage_str)
+                return f"{100-percentage}%" # Qolgan foiz
+            except ValueError:
+                return None
+        return None
+
+    def get_amount_given(self, obj):
+        if obj.product and obj.product.rental_price and obj.percentage:
+            percentage_str = obj.percentage.replace('%', '').strip()
+            try:
+                percentage = int(percentage_str)
+                rental_price = Decimal(obj.product.rental_price)
+                # Berilgan summa: rental_price - (100 - percentage)%
+                discount_amount = (rental_price * (100 - percentage)) / 100
+                return rental_price - discount_amount
+            except ValueError:
+                return None
+        return None
+
+    def get_amount_remaining(self, obj):
+        if obj.product and obj.product.rental_price and obj.percentage:
+            percentage_str = obj.percentage.replace('%', '').strip()
+            try:
+                percentage = int(percentage_str)
+                rental_price = Decimal(obj.product.rental_price)
+                # Qolgan summa: rental_price - percentage%
+                discount_amount = (rental_price * percentage) / 100
+                return rental_price - discount_amount
+            except ValueError:
+                return None
+        return None
+  

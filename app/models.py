@@ -179,8 +179,8 @@ class Lending(models.Model):
     AD = models.CharField(max_length=15)
     JSHSHR = models.CharField(max_length=15)
     adress = models.CharField(max_length=100)
-    phone = models.CharField(max_length=12)
-    spare_phone = models.CharField(max_length=12)
+    phone = models.CharField(max_length=20)
+    spare_phone = models.CharField(max_length=20)
     percentage = models.CharField(
         max_length=25,
         choices=PERCENTAGE_CHOICES
