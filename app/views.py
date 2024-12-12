@@ -207,7 +207,8 @@ class LendingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # if self.request.user.role != User.SELLER:
         #     raise exceptions.PermissionDenied("Only sellers can create lendings")
-            
+        if 'product' not in serializer.validated_data:
+            raise serializers.ValidationError({"product": "This field is required."})
         product = serializer.validated_data['product']
         if product.status != Product.AVAILABLE:
             raise serializers.ValidationError(

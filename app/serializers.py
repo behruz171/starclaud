@@ -170,16 +170,17 @@ class LendingProductDetailsSerializer(serializers.ModelSerializer):
 
 
 class LendingSerializer(serializers.ModelSerializer):
-    product = LendingProductDetailsSerializer(read_only=True)
-    remaining_percentage = serializers.SerializerMethodField()  # Qolgan foiz
-    amount_given = serializers.SerializerMethodField()  # Berilgan summa
-    amount_remaining = serializers.SerializerMethodField()  # Qolgan summa
+    product_detail = LendingProductDetailsSerializer(source='product', read_only=True)
+    remaining_percentage = serializers.SerializerMethodField()  # Remaining percentage
+    amount_given = serializers.SerializerMethodField()  # Amount given
+    amount_remaining = serializers.SerializerMethodField()  # Remaining amount
 
     class Meta:
         model = Lending
         fields = [
-            'id', 
-            'product', 
+            'id',
+            'product',
+            'product_detail',
             'borrower_name', 
             'borrow_date', 
             'return_date', 
@@ -204,7 +205,7 @@ class LendingSerializer(serializers.ModelSerializer):
             percentage_str = obj.percentage.replace('%', '').strip()
             try:
                 percentage = int(percentage_str)
-                return f"{100-percentage}%" # Qolgan foiz
+                return f"{100 - percentage}%"  # Remaining percentage
             except ValueError:
                 return None
         return None
@@ -215,7 +216,7 @@ class LendingSerializer(serializers.ModelSerializer):
             try:
                 percentage = int(percentage_str)
                 rental_price = Decimal(obj.product.rental_price)
-                # Berilgan summa: rental_price - (100 - percentage)%
+                # Amount given: rental_price - (100 - percentage)%
                 discount_amount = (rental_price * (100 - percentage)) / 100
                 return rental_price - discount_amount
             except ValueError:
@@ -228,7 +229,7 @@ class LendingSerializer(serializers.ModelSerializer):
             try:
                 percentage = int(percentage_str)
                 rental_price = Decimal(obj.product.rental_price)
-                # Qolgan summa: rental_price - percentage%
+                # Remaining amount: rental_price - percentage%
                 discount_amount = (rental_price * percentage) / 100
                 return rental_price - discount_amount
             except ValueError:
