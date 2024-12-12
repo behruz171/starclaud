@@ -215,7 +215,7 @@ class LendingViewSet(viewsets.ModelViewSet):
                 {"product": "Product is not available for lending"}
             )
             
-        if product.created_by != self.request.user and product.created_by.created_by != self.request.user:
+        if product.admin != self.request.user and product.admin != self.request.user.created_by:
             raise exceptions.PermissionDenied(
                 "You can only lend your own products"
             )
