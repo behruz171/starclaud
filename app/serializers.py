@@ -166,7 +166,7 @@ class LendingProductDetailsSerializer(serializers.ModelSerializer):
     category = serializers.CharField(source="category.name")
     class Meta:
         model = Product
-        fields = ['id', 'name', 'img', 'category', 'rental_price']
+        fields = ['id', 'name', 'img', 'category', 'rental_price', 'status']
 
 
 class LendingSerializer(serializers.ModelSerializer):
@@ -191,7 +191,9 @@ class LendingSerializer(serializers.ModelSerializer):
             'percentage', 
             'remaining_percentage', 
             'amount_given', 
-            'amount_remaining'
+            'amount_remaining',
+            'phone',
+            'spare_phone'
         ]
         read_only_fields = ['status']
 
