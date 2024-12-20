@@ -33,4 +33,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('user/<int:id>/',views.UserDetailView.as_view(), name='user-detail'),
     path('users/', views.UserListView.as_view(), name='user-list'),
+
+    path('user/image/', views.UserImageView.as_view(), name='user-image'),
 ] 

@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status, permissions, generics, exceptions
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -419,3 +420,26 @@ class SaleViewSet(viewsets.ModelViewSet):
             return Sale.objects.filter(product__admin=user)
         
         return Sale.objects.none()
+
+
+class UserImageView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if user.role == User.DIRECTOR:
+            # If the user is a Director, return their own image
+            serializer = UserImageSerializer(user, context={'request': request})
+            return Response(serializer.data)
+
+        elif user.role in [User.ADMIN, User.SELLER]:
+            # If the user is an Admin or Seller, return the image of the user they created
+            created_by_user = user.created_by  # Assuming 'created_by' is a ForeignKey to User
+            if created_by_user:
+                serializer = UserImageSerializer(created_by_user, context={'request': request})
+                return Response(serializer.data)
+            else:
+                return Response({"error": "No created_by user found."}, status=404)
+
+        return Response({"error": "Unauthorized access."}, status=403)

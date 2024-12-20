@@ -288,18 +288,21 @@ class SaleProductDetailSerializer(serializers.ModelSerializer):
 
 class SaleSerializer(serializers.ModelSerializer):
     product_detail = SaleProductDetailSerializer(source='product', read_only=True)
-    seller_username = serializers.CharField(source='seller.username', read_only=True)  # Read-only field for seller's username
-    seller = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())  # Use PrimaryKeyRelatedField for seller
+    # seller_username = serializers.CharField(source='seller.username', read_only=True)  # Read-only field for seller's username
 
     class Meta:
         model = Sale
-        fields = ["product", "product_detail", "seller", "seller_username", "buyer", "sale_price", "sale_date", "quantity", "status"]
+        fields = ["product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status"]
 
     def create(self, validated_data):
-        # Extract seller from validated_data
-        seller = validated_data.pop('seller')  # Get the seller instance
+        # Get the authenticated user from the request context
+        request = self.context.get('request')
+        seller = request.user if request else None
 
-        # Create the Sale instance
+        if not seller:
+            raise serializers.ValidationError("Seller information is missing.")
+
+        # Create the Sale instance with the authenticated user as the seller
         sale = Sale.objects.create(seller=seller, **validated_data)
 
         # Update product quantity after sale creation
@@ -307,3 +310,18 @@ class SaleSerializer(serializers.ModelSerializer):
         sale.product.save()
 
         return sale
+
+
+class UserImageSerializer(serializers.ModelSerializer):
+    img = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'img']  # Include the fields you want to return
+
+    def get_img(self, obj):
+        # Return the full URL for the image
+        request = self.context.get('request')
+        if obj.img:
+            return request.build_absolute_uri(obj.img.url)  # Construct the full URL
+        return None  # Return None if there is no image
