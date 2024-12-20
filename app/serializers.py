@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from decimal import Decimal
-from .models import User, Product, Lending, Category
+from .models import *
 from django.db.models import Sum
 
 
@@ -193,7 +193,10 @@ class LendingSerializer(serializers.ModelSerializer):
             'amount_given', 
             'amount_remaining',
             'phone',
-            'spare_phone'
+            'spare_phone',
+            'AD',
+            'JSHSHR',
+            'adress'
         ]
         read_only_fields = ['status']
 
@@ -274,3 +277,33 @@ class SellerStatisticsSerializer(serializers.ModelSerializer):
         kpi_percentage = obj.KPI  # Assuming KPI is stored as a percentage (e.g., 20 for 20%)
         discount_amount = (total_rental_price * kpi_percentage) / 100  # Calculate the discount based on KPI
         return total_rental_price + discount_amount  # Return the total rental price after discount
+    
+
+class SaleProductDetailSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source="category.name")
+
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'img', 'category', 'rental_price', 'status']
+
+class SaleSerializer(serializers.ModelSerializer):
+    product_detail = SaleProductDetailSerializer(source='product', read_only=True)
+    seller_username = serializers.CharField(source='seller.username', read_only=True)  # Read-only field for seller's username
+    seller = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())  # Use PrimaryKeyRelatedField for seller
+
+    class Meta:
+        model = Sale
+        fields = ["product", "product_detail", "seller", "seller_username", "buyer", "sale_price", "sale_date", "quantity", "status"]
+
+    def create(self, validated_data):
+        # Extract seller from validated_data
+        seller = validated_data.pop('seller')  # Get the seller instance
+
+        # Create the Sale instance
+        sale = Sale.objects.create(seller=seller, **validated_data)
+
+        # Update product quantity after sale creation
+        sale.product.quantity -= sale.quantity
+        sale.product.save()
+
+        return sale

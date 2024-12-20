@@ -198,10 +198,12 @@ class LendingViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:  # Foydalanuvchi autentifikatsiya qilinganligini tekshirish
            return Lending.objects.none()
         
-        if user.role == User.ADMIN or user.role == User.DIRECTOR:
-            return Lending.objects.filter(product__admin=user)
-        elif user.role == User.SELLER:
-            return Lending.objects.filter(seller=user)
+        if user.role == User.ADMIN or user.role == User.SELLER:
+            return Lending.objects.filter(product__admin=user.created_by, status=Lending.LENT)
+        elif user.role == User.DIRECTOR:
+            return Lending.objects.filter(product__admin=user, status=Lending.LENT)
+        # elif user.role == User.SELLER:
+        #     return Lending.objects.filter(seller=user)
         return Lending.objects.none()
 
     def perform_create(self, serializer):
@@ -400,3 +402,20 @@ class SellerStatisticsView(generics.RetrieveAPIView):
             return Response({'status': 'error', 'message': 'Seller not found'}, status=status.HTTP_404_NOT_FOUND)
         
         return Response(self.get_serializer(seller).data)
+
+
+class SaleViewSet(viewsets.ModelViewSet):
+    serializer_class = SaleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Sale.objects.none()
+        
+        if user.role == User.ADMIN or user.role == User.SELLER:
+            return Sale.objects.filter(product__admin=user.created_by)
+        elif user.role == User.DIRECTOR:
+            return Sale.objects.filter(product__admin=user)
+        
+        return Sale.objects.none()

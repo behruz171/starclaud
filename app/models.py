@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib import admin
+from rest_framework import serializers
 
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -224,3 +226,44 @@ def update_product_status(sender, instance, created, **kwargs):
         product.status = Product.AVAILABLE
         
     product.save()
+
+class Sale(models.Model):
+    STATUS_CHOICES = [
+        ('COMPLETED', 'Completed'),
+        ('PENDING', 'Pending'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='sales')
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sales')
+    buyer = models.CharField(max_length=100)
+    sale_price = models.DecimalField(max_digits=10, decimal_places=2)
+    sale_date = models.DateField(auto_now_add=True)
+    quantity = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+
+    class Meta:
+        ordering = ['-sale_date']
+
+    def __str__(self):
+        return f"{self.product.name} sold by {self.seller.username} to {self.buyer} for {self.sale_price}"
+
+    def save(self, *args, **kwargs):
+        # Mahsulotning mavjud miqdorini tekshirish
+        if self.quantity > self.product.quantity:
+            raise ValidationError("Sotilayotgan miqdor mahsulotning mavjud miqdoridan oshib ketmasligi kerak.")
+        
+        # Mahsulotning choice ni tekshirish
+        if self.product.choice != 'SELL':
+            raise ValidationError("Faqat 'SELL' tanloviga ega mahsulotlarni sotish mumkin.")
+        
+        if self.product.admin != self.seller.created_by and self.product.admin != self.seller:
+            raise ValidationError("Sotuvchi mahsulotning admini bilan bir xil 'created_by' ga ega bo'lishi kerak.")
+        # Agar hammasi to'g'ri bo'lsa, saqlash
+        super().save(*args, **kwargs)
+
+        # Sotilgandan so'ng, mahsulotning miqdorini yangilash
+        self.product.quantity -= self.quantity
+        self.product.save()
+
+admin.site.register(Sale)

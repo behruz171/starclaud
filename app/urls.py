@@ -4,11 +4,8 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'lendings', views.LendingViewSet, basename='lending')
-
+router.register(r'sales', views.SaleViewSet, basename='sale')
 app_name = 'app'
-
-router = DefaultRouter()
-router.register(r'lendings', views.LendingViewSet, basename='lending')
 
 
 urlpatterns = [
@@ -22,6 +19,8 @@ urlpatterns = [
     path('products/<int:pk>/status/', views.ProductStatusUpdateView.as_view(), name='product-status'),
 
     # Lending URL s
+    path('', include(router.urls)),
+
     path('', include(router.urls)),
     
     # Category URLs
