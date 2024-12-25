@@ -9,6 +9,9 @@ from django.contrib.auth import authenticate
 from .models import *
 from .serializers import *
 from django.db.models import Q
+from django.utils import timezone
+from django.db.models import Sum
+from collections import defaultdict
 
 class LoginView(TokenObtainPairView):
     permission_classes = []
@@ -443,3 +446,124 @@ class UserImageView(APIView):
                 return Response({"error": "No created_by user found."}, status=404)
 
         return Response({"error": "Unauthorized access."}, status=403)
+
+class StatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        user = request.user
+        
+        # Faqat Directorlar uchun
+        if user.role != User.DIRECTOR:
+            return Response({'status': 'error', 'message': 'Only directors can view statistics.'}, status=403)
+        # Get the current date
+        # Kunlik statistikalar (har ikki soatda)
+        daily_revenue = defaultdict(float)
+        now = timezone.now()
+
+        for hour in range(0, 24, 2):  # Har 2 soatda
+            start_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            end_time = start_time + timezone.timedelta(hours=2)
+            
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__range=(start_time, end_time),
+                product__created_by__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__range=(start_time, end_time),
+                product__admin__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('const'))['const__sum'] or 0
+            
+            # Umumiy daromadni yig'ish
+            total_revenue = sale_revenue + lending_revenue
+            daily_revenue[start_time.strftime("%H:%M")] = total_revenue
+
+        # Haftalik statistikalar (Dushanbadan Yakshabgacha)
+        weekly_revenue = defaultdict(float)
+        now = timezone.now()
+        start_of_week = now - timezone.timedelta(days=now.weekday())  # Dushanbadan boshlanadi
+
+        for i in range(7):  # Haftada 7 kun
+            day = start_of_week + timezone.timedelta(days=i)
+            
+            # Sale daromadini hisoblash
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__date=day,
+                product__created_by__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__date=day,
+                product__admin__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('const'))['const__sum'] or 0
+            
+            # Umumiy daromadni yig'ish
+            total_revenue = sale_revenue + lending_revenue
+            weekly_revenue[day.strftime("%A")] = total_revenue  # Kun nomi
+
+        # Monthly statistics (daily revenue for each day of the current month)
+        monthly_revenue = defaultdict(float)
+        start_of_month = now.replace(day=1)  # Oyning birinchi kuni
+        end_of_month = (start_of_month + timezone.timedelta(days=31)).replace(day=1)  # Keyingi oyning birinchi kuni
+
+        # Har bir kun uchun daromadni hisoblash
+        for day in range(1, (end_of_month - start_of_month).days + 1):
+            day_date = start_of_month.replace(day=day)
+            
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__date=day_date,
+                product__created_by__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__date=day_date,
+                product__admin__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('const'))['const__sum'] or 0
+            
+            # Umumiy daromadni yig'ish
+            total_revenue = sale_revenue + lending_revenue
+            monthly_revenue[day_date.strftime("%d")] = total_revenue  # Sanani formatlash
+
+        # Yillik statistikalar (har bir oy uchun daromad)
+        yearly_revenue = defaultdict(float)
+        now = timezone.now()
+        start_of_year = now.replace(month=1, day=1)
+
+        for month in range(1, 13):  # 1 dan 12 gacha
+            month_date = start_of_year.replace(month=month)
+            
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__year=now.year,
+                sale_date__month=month,
+                product__created_by__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__year=now.year,
+                borrow_date__month=month,
+                product__admin__in=[request.user] + list(request.user.created_users.all())
+            ).aggregate(Sum('const'))['const__sum'] or 0
+            
+            # Umumiy daromadni yig'ish
+            total_revenue = sale_revenue + lending_revenue
+            yearly_revenue[month_date.strftime("%B")] = total_revenue  # Oy nomi
+
+        # Prepare the response data
+        statistics = {
+            'daily': dict(daily_revenue),
+            'weekly': dict(weekly_revenue),
+            'monthly': dict(monthly_revenue),
+            'yearly': dict(yearly_revenue),
+        }
+
+        return Response(statistics)

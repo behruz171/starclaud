@@ -58,3 +58,4 @@ class LendingAdmin(admin.ModelAdmin):
                 return qs.filter(seller=request.user)
         return qs
 admin.site.register(Category)
+admin.site.register(Sale)

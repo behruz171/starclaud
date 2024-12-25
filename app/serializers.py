@@ -325,3 +325,8 @@ class UserImageSerializer(serializers.ModelSerializer):
         if obj.img:
             return request.build_absolute_uri(obj.img.url)  # Construct the full URL
         return None  # Return None if there is no image
+
+class StatisticsSerializer(serializers.Serializer):
+    total_lendings = serializers.IntegerField()
+    total_sales = serializers.IntegerField()
+    total_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)

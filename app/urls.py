@@ -35,4 +35,5 @@ urlpatterns = [
     path('users/', views.UserListView.as_view(), name='user-list'),
 
     path('user/image/', views.UserImageView.as_view(), name='user-image'),
+    path('statistics/', views.StatisticsView.as_view(), name='statistics'),
 ] 

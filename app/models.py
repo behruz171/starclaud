@@ -74,7 +74,7 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
-class Category(models.Model):
+class Category(BaseModel):
     name = models.CharField(max_length=255, unique=True)
     created_by = models.ForeignKey(
         User,
@@ -142,7 +142,7 @@ class Product(BaseModel):
     def __str__(self):
         return f"{self.name} ({self.get_status_display()})"
 
-class Lending(models.Model):
+class Lending(BaseModel):
     LENT = 'LENT'
     RETURNED = 'RETURNED'
 
@@ -175,7 +175,7 @@ class Lending(models.Model):
         related_name='lendings'
     )
     borrower_name = models.CharField(max_length=255)
-    borrow_date = models.DateField()
+    borrow_date = models.DateTimeField()
     return_date = models.DateField()
     actual_return_date = models.DateField(null=True, blank=True)
     AD = models.CharField(max_length=15)
@@ -227,7 +227,7 @@ def update_product_status(sender, instance, created, **kwargs):
         
     product.save()
 
-class Sale(models.Model):
+class Sale(BaseModel):
     STATUS_CHOICES = [
         ('COMPLETED', 'Completed'),
         ('PENDING', 'Pending'),
@@ -238,7 +238,7 @@ class Sale(models.Model):
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sales')
     buyer = models.CharField(max_length=100)
     sale_price = models.DecimalField(max_digits=10, decimal_places=2)
-    sale_date = models.DateField(auto_now_add=True)
+    sale_date = models.DateTimeField(auto_now_add=True)
     quantity = models.PositiveIntegerField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
 
@@ -265,5 +265,3 @@ class Sale(models.Model):
         # Sotilgandan so'ng, mahsulotning miqdorini yangilash
         self.product.quantity -= self.quantity
         self.product.save()
-
-admin.site.register(Sale)
