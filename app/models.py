@@ -5,6 +5,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib import admin
 from rest_framework import serializers
+from django.utils import timezone
+import pytz
 
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -226,6 +228,7 @@ def update_product_status(sender, instance, created, **kwargs):
         product.status = Product.AVAILABLE
         
     product.save()
+
 
 class Sale(BaseModel):
     STATUS_CHOICES = [

@@ -163,7 +163,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class LendingProductDetailsSerializer(serializers.ModelSerializer):
-    category = serializers.CharField(source="category.name")
+    category = serializers.CharField(source="category.name", read_only=True)
     class Meta:
         model = Product
         fields = ['id', 'name', 'img', 'category', 'rental_price', 'status']
@@ -280,11 +280,11 @@ class SellerStatisticsSerializer(serializers.ModelSerializer):
     
 
 class SaleProductDetailSerializer(serializers.ModelSerializer):
-    category = serializers.CharField(source="category.name")
+    category = serializers.CharField(source='category.name', read_only=True)  # Agar category ForeignKey bo'lsa
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'img', 'category', 'rental_price', 'status']
+        fields = ['id', 'name', 'category', 'img', 'rental_price', 'status']  # 'category' ni qo'shing # Agar category bo'lmasa, None qaytaring
 
 class SaleSerializer(serializers.ModelSerializer):
     product_detail = SaleProductDetailSerializer(source='product', read_only=True)
@@ -306,7 +306,7 @@ class SaleSerializer(serializers.ModelSerializer):
         sale = Sale.objects.create(seller=seller, **validated_data)
 
         # Update product quantity after sale creation
-        sale.product.quantity -= sale.quantity
+        # sale.product.quantity -= sale.quantity
         sale.product.save()
 
         return sale

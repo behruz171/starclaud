@@ -5,13 +5,17 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import *
 from .serializers import *
 from django.db.models import Q
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField
+from django.db.models.functions import Cast, Replace
 from collections import defaultdict
+from decimal import Decimal
+import pytz
 
 class LoginView(TokenObtainPairView):
     permission_classes = []
@@ -100,14 +104,17 @@ class ProductListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         status_filter = self.request.query_params.get('status', None)  # URL dan status parametrini olish
+        # queryset = super().get_queryset()
+        category = self.request.query_params.get('category', None)  # URL dan category parametrini olish
+
 
         queryset = Product.objects.all()  # Barcha mahsulotlarni olish
 
         if user.role == User.DIRECTOR:
             # DIRECTOR barcha mahsulotlarni ko'radi
-            pass
+            queryset = queryset.filter(admin=user)
         elif user.role == User.ADMIN:
-            queryset = queryset.filter(admin=user)  # ADMIN o'zining mahsulotlarini ko'radi
+            queryset = queryset.filter(admin=user.created_by)  # ADMIN o'zining mahsulotlarini ko'radi
         elif user.role == User.SELLER:
             queryset = queryset.filter(
                 Q(created_by=user) | 
@@ -116,6 +123,9 @@ class ProductListCreateView(generics.ListCreateAPIView):
 
         if status_filter:
             queryset = queryset.filter(status=status_filter)  # Status bo'yicha filtr qo'shish
+        
+        if category is not None:
+            queryset = queryset.filter(category__name=category)  # category bo'yicha filtr
 
         return queryset
 
@@ -470,13 +480,15 @@ class StatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__range=(start_time, end_time),
                 product__created_by__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(total_revenue=Sum('total_price'))['total_revenue'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
                 borrow_date__range=(start_time, end_time),
                 product__admin__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('const'))['const__sum'] or 0
+            ).aggregate(
+                total_rental_revenue=Sum('product__rental_price')  # Faqat rental_price ni hisoblaymiz
+            )['total_rental_revenue'] or 0
             
             # Umumiy daromadni yig'ish
             total_revenue = sale_revenue + lending_revenue
@@ -495,13 +507,15 @@ class StatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__date=day,
                 product__created_by__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(total_revenue=Sum('total_price'))['total_revenue'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
                 borrow_date__date=day,
                 product__admin__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('const'))['const__sum'] or 0
+            ).aggregate(
+                total_rental_revenue=Sum('product__rental_price')  # Faqat rental_price ni hisoblaymiz
+            )['total_rental_revenue'] or 0
             
             # Umumiy daromadni yig'ish
             total_revenue = sale_revenue + lending_revenue
@@ -520,13 +534,15 @@ class StatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__date=day_date,
                 product__created_by__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(total_revenue=Sum('total_price'))['total_revenue'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
                 borrow_date__date=day_date,
                 product__admin__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('const'))['const__sum'] or 0
+            ).aggregate(
+                total_rental_revenue=Sum('product__rental_price')  # Faqat rental_price ni hisoblaymiz
+            )['total_rental_revenue'] or 0
             
             # Umumiy daromadni yig'ish
             total_revenue = sale_revenue + lending_revenue
@@ -545,14 +561,16 @@ class StatisticsView(APIView):
                 sale_date__year=now.year,
                 sale_date__month=month,
                 product__created_by__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(total_revenue=Sum('total_price'))['total_revenue'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
                 borrow_date__year=now.year,
                 borrow_date__month=month,
                 product__admin__in=[request.user] + list(request.user.created_users.all())
-            ).aggregate(Sum('const'))['const__sum'] or 0
+            ).aggregate(
+                total_rental_revenue=Sum('product__rental_price')  # Faqat rental_price ni hisoblaymiz
+            )['total_rental_revenue'] or 0
             
             # Umumiy daromadni yig'ish
             total_revenue = sale_revenue + lending_revenue
@@ -567,3 +585,503 @@ class StatisticsView(APIView):
         }
 
         return Response(statistics)
+
+class DailyStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != User.DIRECTOR:
+            raise serializers.ValidationError({"error": "Siz director emasssiz shuning uchun tur yo'qol bo'ttan"})
+        return Response(self.get_daily_statistics(user))
+
+    def get_daily_statistics(self, user):
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        now = timezone.now().astimezone(uzbekistan_tz)
+        daily_revenue = defaultdict(float)
+        daily_lend_statistic = defaultdict(int)
+        daily_returned_statistic = defaultdict(int)
+        total_count = 0
+        total_return_count = 0
+        users_product_count = defaultdict(int)
+
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)  # 00:00
+        end = now.replace(hour=23, minute=59, second=59, microsecond=999999)  # 23:59:59
+
+        for hour in range(0, 24, 1):  # Har 2 soatda
+            start_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            end_time = start_time + timezone.timedelta(hours=1)
+
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__range=(start_time, end_time),
+                product__created_by=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or Decimal(0)
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__range=(start_time, end_time),
+                product__admin__in=[user] + list(user.created_users.all())
+            ).annotate(
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),
+                    default=F('product__rental_price') * (F('percentage_value') / 100),
+                    output_field=DecimalField()
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')
+            )['total_rental_revenue'] or Decimal(0)
+
+            daily_revenue[start_time.strftime("%H:%M")] = sale_revenue + lending_revenue
+
+            # Lending Percentage statistikasi
+            lendings = Lending.objects.filter(
+                borrow_date__range=(start_time, end_time),
+                product__admin=user
+            )
+
+            for lending in lendings:
+                percentage = lending.percentage  # Percentage maydoni
+                daily_lend_statistic[percentage] += 1
+
+            total_count += lendings.count()
+
+            returned_lendings = lendings.filter(status='RETURNED')  # Statusi 'returned' bo'lgan lendinglar
+            total_return_count += returned_lendings.count()
+
+            for returned_lending in returned_lendings:
+                percentage_value = int(returned_lending.percentage.rstrip('%'))  # '%' ni olib tashlaymiz va int ga aylantiramiz
+                returned_percentage = 100 - percentage_value  # 100 - Percentage
+                returned_percentage_str = f"{returned_percentage}%"  # Natijani formatlash
+
+                daily_returned_statistic[returned_percentage_str] += 1
+            
+            # Foydalanuvchilarni hisoblash
+            created_users = user.created_users.all()
+
+            for created_user in created_users:
+                sales_count = Sale.objects.filter(
+                    seller=created_user,
+                    sale_date__range=(start, end),
+                    product__created_by=user
+                ).count()
+                lending_count = Lending.objects.filter(
+                    borrow_date__range=(start, end),
+                    product__admin=user,
+                    seller=created_user
+                ).count()
+                count = lending_count + sales_count
+                users_product_count[created_user.username] = count
+
+        return {
+            'daily_statistic': dict(daily_revenue),
+            'daily_lend_statistic': dict(daily_lend_statistic),
+            'daily_returned_statistic': dict(daily_returned_statistic),
+            'total_count': total_count,
+            'total_returned_count': total_return_count,
+            'users_product_count': dict(users_product_count)
+        }
+
+
+class WeeklyStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response(self.get_weekly_statistics(user))
+
+    def get_weekly_statistics(self, user):
+        now = timezone.now()
+        start_of_week = now - timezone.timedelta(days=now.weekday())  # Dushanbadan boshlanadi
+        weekly_revenue = defaultdict(float)
+        weekly_lend_statistic = defaultdict(int)
+        weekly_returned_statistic = defaultdict(int)
+        
+        total_count = 0
+        total_return_count = 0
+
+        for i in range(7):  # Haftada 7 kun
+            day = start_of_week + timezone.timedelta(days=i)
+            day_name = day.strftime("%A")
+
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__date=day,
+                product__created_by=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__date=day,
+                product__admin=user
+            ).annotate(
+                # '%' belgisini olib tashlaymiz va float ga aylantiramiz
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),  # '%' belgisini olib tashlaymiz
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),  # Agar status 'returned' bo'lsa, rental_price ni to'liq hisoblaymiz
+                    default=F('product__rental_price') * (F('percentage_value') / 100),  # Aks holda, rental_price ni percentage ga ko'paytiramiz
+                    output_field=DecimalField()  # Natijaning turini belgilaymiz
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')  # Hisoblangan rental_price ni yig'amiz
+            )['total_rental_revenue'] or Decimal(0)
+
+            weekly_revenue[day_name] = sale_revenue + lending_revenue
+
+            lendings = Lending.objects.filter(
+                borrow_date__date=day,
+                product__admin=user
+            )
+
+            for lending in lendings:
+                percentage = lending.percentage  # Percentage maydoni
+                if percentage in weekly_lend_statistic:
+                    weekly_lend_statistic[percentage] += 1
+                else:
+                    weekly_lend_statistic[percentage] = 1
+            total_count += lendings.count()
+
+            returned_lendings = lendings.filter(status='RETURNED')  # Statusi 'returned' bo'lgan lendinglar
+            total_return_count += returned_lendings.count()
+
+            for returned_lending in returned_lendings:
+                # Percentage qiymatini to'g'ri formatlash
+                percentage_value = int(returned_lending.percentage.rstrip('%'))  # '%' ni olib tashlaymiz va int ga aylantiramiz
+                returned_percentage = 100 - percentage_value  # 100 - Percentage
+                returned_percentage_str = f"{returned_percentage}%"  # Natijani formatlash
+
+                if returned_percentage_str in weekly_returned_statistic:
+                    weekly_returned_statistic[returned_percentage_str] += 1
+                else:
+                   weekly_returned_statistic[returned_percentage_str] = 1
+
+                
+
+        return {
+            "weekly_statistic":dict(weekly_revenue),
+            'weekly_lend_statistic': dict(weekly_lend_statistic),
+            'weekly_return_statistic': dict(weekly_returned_statistic),
+            'total_count': total_count,
+            'total_return_count': total_return_count
+        
+        }
+
+
+class MonthlyStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response(self.get_monthly_statistics(user))
+
+    def get_monthly_statistics(self, user):
+        now = timezone.now()
+        year = now.year
+        month = now.month
+        monthly_revenue = defaultdict(float)
+        monthly_lend_statistic = defaultdict(int)
+        monthly_returned_statistic = defaultdict(int)
+
+        total_count = 0
+        total_return_count = 0
+        # Oyning har bir kunini hisoblash
+        for day in range(1, 32):  # 1 dan 31 gacha
+            try:
+                date = timezone.datetime(year, month, day)
+            except ValueError:
+                # Agar bu oyda bunday kun bo'lmasa, davom etamiz
+                continue
+
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__date=date,
+                product__created_by=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__date=date,
+                product__admin=user
+            ).annotate(
+                # '%' belgisini olib tashlaymiz va float ga aylantiramiz
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),  # '%' belgisini olib tashlaymiz
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),  # Agar status 'returned' bo'lsa, rental_price ni to'liq hisoblaymiz
+                    default=F('product__rental_price') * (F('percentage_value') / 100),  # Aks holda, rental_price ni percentage ga ko'paytiramiz
+                    output_field=DecimalField()  # Natijaning turini belgilaymiz
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')  # Hisoblangan rental_price ni yig'amiz
+            )['total_rental_revenue'] or Decimal(0)
+
+            monthly_revenue[date.strftime("%d")] = sale_revenue + lending_revenue  # Kun raqami
+
+            lendings = Lending.objects.filter(
+                borrow_date__date=date,
+                product__admin=user
+            )
+
+            for lending in lendings:
+                percentage = lending.percentage  # Percentage maydoni
+                if percentage in monthly_lend_statistic:
+                    monthly_lend_statistic[percentage] += 1
+                else:
+                    monthly_lend_statistic[percentage] = 1
+            total_count += lendings.count()
+
+
+            returned_lendings = lendings.filter(status='RETURNED')  # Statusi 'returned' bo'lgan lendinglar
+            total_return_count += returned_lendings.count()
+
+            for returned_lending in returned_lendings:
+                # Percentage qiymatini to'g'ri formatlash
+                percentage_value = int(returned_lending.percentage.rstrip('%'))  # '%' ni olib tashlaymiz va int ga aylantiramiz
+                returned_percentage = 100 - percentage_value  # 100 - Percentage
+                returned_percentage_str = f"{returned_percentage}%"  # Natijani formatlash
+
+                if returned_percentage_str in monthly_returned_statistic:
+                    monthly_returned_statistic[returned_percentage_str] += 1
+                else:
+                   monthly_returned_statistic[returned_percentage_str] = 1
+            
+
+        return {
+            "monthly_statistic":dict(monthly_revenue),
+            'monthly_lend_statistic': dict(monthly_lend_statistic),
+            'monthly_return_statistic': dict(monthly_returned_statistic),
+            'total_count': total_count,
+            'total_return_count': total_return_count,
+        }
+
+class YearlyStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response(self.get_yearly_statistics(user))
+
+    def get_yearly_statistics(self, user):
+        now = timezone.now()
+        current_year = now.year
+        yearly_revenue = defaultdict(float)
+
+        for year in range(current_year - 4, current_year + 1):  # 2 yil oldin va hozirgi yil
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__year=year,
+                product__created_by=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__year=year,
+                product__admin=user
+            ).aggregate(
+                total_rental_revenue=Sum('product__rental_price')  # Faqat rental_price ni hisoblaymiz
+            )['total_rental_revenue'] or 0
+
+            yearly_revenue[str(year)] = sale_revenue + lending_revenue
+
+        return dict(yearly_revenue)
+
+
+class YearlyDetailStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, year):
+        user = request.user
+        return Response(self.get_yearly_statistics(user, year))
+
+    def get_yearly_statistics(self, user, year):
+        yearly_revenue = defaultdict(float)
+        yearly_lend_statistic = defaultdict(int)
+        yearly_returned_statistic = defaultdict(int)
+        total_count = 0
+        total_return_count = 0
+
+        # Har bir oy uchun daromadlarni hisoblash
+        for month in range(1, 13):  # 1 dan 12 gacha
+            month_name = timezone.datetime(year, month, 1).strftime("%B")
+
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__year=year,
+                sale_date__month=month,
+                product__created_by=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__year=year,
+                borrow_date__month=month,
+                product__admin=user
+            ).annotate(
+                # '%' belgisini olib tashlaymiz va float ga aylantiramiz
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),  # '%' belgisini olib tashlaymiz
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),  # Agar status 'returned' bo'lsa, rental_price ni to'liq hisoblaymiz
+                    default=F('product__rental_price') * (F('percentage_value') / 100),  # Aks holda, rental_price ni percentage ga ko'paytiramiz
+                    output_field=DecimalField()  # Natijaning turini belgilaymiz
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')  # Hisoblangan rental_price ni yig'amiz
+            )['total_rental_revenue'] or Decimal(0)
+
+            yearly_revenue[month_name.lower()] = sale_revenue + lending_revenue  # Oyning nomini kichik harflar bilan saqlaymiz
+
+            lendings = Lending.objects.filter(
+                borrow_date__year=year,
+                borrow_date__month=month,
+                product__admin=user
+            )
+
+            for lending in lendings:
+                percentage = lending.percentage  # Percentage maydoni
+                if percentage in yearly_lend_statistic:
+                    yearly_lend_statistic[percentage] += 1
+                else:
+                    yearly_lend_statistic[percentage] = 1
+            total_count += lendings.count()
+
+            returned_lendings = lendings.filter(status='RETURNED')  # Statusi 'returned' bo'lgan lendinglar
+            total_return_count += returned_lendings.count()
+
+            for returned_lending in returned_lendings:
+                # Percentage qiymatini to'g'ri formatlash
+                percentage_value = int(returned_lending.percentage.rstrip('%'))  # '%' ni olib tashlaymiz va int ga aylantiramiz
+                returned_percentage = 100 - percentage_value  # 100 - Percentage
+                returned_percentage_str = f"{returned_percentage}%"  # Natijani formatlash
+
+                if returned_percentage_str in yearly_returned_statistic:
+                    yearly_returned_statistic[returned_percentage_str] += 1
+                else:
+                   yearly_returned_statistic[returned_percentage_str] = 1
+
+        return {
+            "yearly_statistic":dict(yearly_revenue),
+            'yearly_lend_statistic': dict(yearly_lend_statistic),
+            'yearly_returned_statistic':dict(yearly_returned_statistic),
+            'total_count': total_count,
+            'total_return_count': total_return_count,
+        }
+
+class UserStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        # Foydalanuvchini ID orqali olish
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'status': 'error', 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user != user and request.user != user.created_by:
+            return Response({'status': 'error', 'message': 'You do not have permission to view this user\'s statistics.'}, status=status.HTTP_403_FORBIDDEN)
+        # Statistika hisoblash
+        statistics = {
+            'daily': self.get_daily_statistics(user),
+            'weekly': self.get_weekly_statistics(user),
+            'monthly': self.get_monthly_statistics(user),
+            'yearly': self.get_yearly_statistics(user),
+        }
+
+        return Response(statistics)
+
+    def get_daily_statistics(self, user):
+        now = timezone.now()
+        daily_revenue = defaultdict(float)
+
+        for hour in range(0, 24, 2):  # Har 2 soatda
+            start_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            end_time = start_time + timezone.timedelta(hours=2)
+
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__range=(start_time, end_time),
+                product__created_by=user
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__range=(start_time, end_time),
+                product__admin=user
+            ).aggregate(Sum('const'))['const__sum'] or 0
+
+            daily_revenue[start_time.strftime("%H:%M")] = sale_revenue + lending_revenue
+
+        return dict(daily_revenue)
+
+    def get_weekly_statistics(self, user):
+        now = timezone.now()
+        start_of_week = now - timezone.timedelta(days=now.weekday())  # Dushanbadan boshlanadi
+        weekly_revenue = defaultdict(float)
+
+        for i in range(7):  # Haftada 7 kun
+            day = start_of_week + timezone.timedelta(days=i)
+            day_name = day.strftime("%A")
+
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__date=day,
+                product__created_by=user
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__date=day,
+                product__admin=user
+            ).aggregate(Sum('const'))['const__sum'] or 0
+
+            weekly_revenue[day_name] = sale_revenue + lending_revenue
+
+        return dict(weekly_revenue)
+
+    def get_monthly_statistics(self, user):
+        now = timezone.now()
+        month = now.month
+        year = now.year
+        monthly_revenue = defaultdict(float)
+
+        for m in range(1, 13):  # 1 dan 12 gacha
+            month_name = timezone.datetime(year, m, 1).strftime("%B")
+
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__year=year,
+                sale_date__month=m,
+                product__created_by=user
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__year=year,
+                borrow_date__month=m,
+                product__admin=user
+            ).aggregate(Sum('const'))['const__sum'] or 0
+
+            monthly_revenue[month_name] = sale_revenue + lending_revenue
+
+        return dict(monthly_revenue)
+
+    def get_yearly_statistics(self, user):
+        now = timezone.now()
+        current_year = now.year
+        yearly_revenue = defaultdict(float)
+
+        for year in range(current_year - 4, current_year + 1):  # 2 yil oldin va hozirgi yil
+            # Sale daromadini hisoblash
+            sale_revenue = Sale.objects.filter(
+                sale_date__year=year,
+                product__created_by=user
+            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+
+            # Lending daromadini hisoblash
+            lending_revenue = Lending.objects.filter(
+                borrow_date__year=year,
+                product__admin=user
+            ).aggregate(Sum('const'))['const__sum'] or 0
+
+            yearly_revenue[str(year)] = sale_revenue + lending_revenue
+
+        return dict(yearly_revenue)
