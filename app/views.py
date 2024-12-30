@@ -11,11 +11,13 @@ from .models import *
 from .serializers import *
 from django.db.models import Q
 from django.utils import timezone
-from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField
+from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField, ExpressionWrapper
 from django.db.models.functions import Cast, Replace
 from collections import defaultdict
 from decimal import Decimal
 import pytz
+import calendar
+from datetime import datetime
 
 class LoginView(TokenObtainPairView):
     permission_classes = []
@@ -599,8 +601,8 @@ class DailyStatisticsView(APIView):
         uzbekistan_tz = pytz.timezone('Asia/Tashkent')
         now = timezone.now().astimezone(uzbekistan_tz)
         daily_revenue = defaultdict(float)
-        daily_lend_statistic = defaultdict(int)
-        daily_returned_statistic = defaultdict(int)
+        daily_lend_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
+        daily_returned_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
         total_count = 0
         total_return_count = 0
         users_product_count = defaultdict(int)
@@ -675,9 +677,9 @@ class DailyStatisticsView(APIView):
                 users_product_count[created_user.username] = count
 
         return {
-            'daily_statistic': dict(daily_revenue),
-            'daily_lend_statistic': dict(daily_lend_statistic),
-            'daily_returned_statistic': dict(daily_returned_statistic),
+            'statistic': dict(daily_revenue),
+            'lend_statistic': dict(daily_lend_statistic),
+            'returned_statistic': dict(daily_returned_statistic),
             'total_count': total_count,
             'total_returned_count': total_return_count,
             'users_product_count': dict(users_product_count)
@@ -689,14 +691,19 @@ class WeeklyStatisticsView(APIView):
 
     def get(self, request):
         user = request.user
+        if user.role != User.DIRECTOR:
+            raise serializers.ValidationError({"error": "Siz director emasssiz shuning uchun tur yo'qol bo'ttan"})
         return Response(self.get_weekly_statistics(user))
 
     def get_weekly_statistics(self, user):
         now = timezone.now()
         start_of_week = now - timezone.timedelta(days=now.weekday())  # Dushanbadan boshlanadi
+        end_of_week = start_of_week + timezone.timedelta(days=6)
         weekly_revenue = defaultdict(float)
-        weekly_lend_statistic = defaultdict(int)
-        weekly_returned_statistic = defaultdict(int)
+        weekly_lend_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
+        weekly_returned_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
+        users_product_count = defaultdict(int)
+
         
         total_count = 0
         total_return_count = 0
@@ -755,15 +762,32 @@ class WeeklyStatisticsView(APIView):
                     weekly_returned_statistic[returned_percentage_str] += 1
                 else:
                    weekly_returned_statistic[returned_percentage_str] = 1
+            
+            created_users = user.created_users.all()
+
+            for created_user in created_users:
+                sales_count = Sale.objects.filter(
+                    seller=created_user,
+                    sale_date__date__range=(start_of_week, end_of_week),
+                    product__created_by=user
+                ).count()
+                lending_count = Lending.objects.filter(
+                    borrow_date__date__range=(start_of_week, end_of_week),
+                    product__admin=user,
+                    seller=created_user
+                ).count()
+                count = lending_count + sales_count
+                users_product_count[created_user.username] = count
 
                 
 
         return {
-            "weekly_statistic":dict(weekly_revenue),
-            'weekly_lend_statistic': dict(weekly_lend_statistic),
-            'weekly_return_statistic': dict(weekly_returned_statistic),
+            "statistic":dict(weekly_revenue),
+            'lend_statistic': dict(weekly_lend_statistic),
+            'return_statistic': dict(weekly_returned_statistic),
             'total_count': total_count,
-            'total_return_count': total_return_count
+            'total_return_count': total_return_count,
+            "users_product_count": dict(users_product_count)
         
         }
 
@@ -773,6 +797,8 @@ class MonthlyStatisticsView(APIView):
 
     def get(self, request):
         user = request.user
+        if user.role != User.DIRECTOR:
+            raise serializers.ValidationError({"error": "Siz director emasssiz shuning uchun tur yo'qol bo'ttan"})
         return Response(self.get_monthly_statistics(user))
 
     def get_monthly_statistics(self, user):
@@ -780,8 +806,13 @@ class MonthlyStatisticsView(APIView):
         year = now.year
         month = now.month
         monthly_revenue = defaultdict(float)
-        monthly_lend_statistic = defaultdict(int)
-        monthly_returned_statistic = defaultdict(int)
+        monthly_lend_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
+        monthly_returned_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
+        users_product_count = defaultdict(int)
+
+        start_of_month = now.replace(day=1)
+        last_day_of_month = calendar.monthrange(year, month)[1]
+        end_of_month = now.replace(day=last_day_of_month)
 
         total_count = 0
         total_return_count = 0
@@ -846,12 +877,30 @@ class MonthlyStatisticsView(APIView):
                    monthly_returned_statistic[returned_percentage_str] = 1
             
 
+            created_users = user.created_users.all()
+
+            for created_user in created_users:
+                sales_count = Sale.objects.filter(
+                    seller=created_user,
+                    sale_date__range=(start_of_month, end_of_month),
+                    product__created_by=user
+                ).count()
+                lending_count = Lending.objects.filter(
+                    borrow_date__range=(start_of_month, end_of_month),
+                    product__admin=user,
+                    seller=created_user
+                ).count()
+                count = lending_count + sales_count
+                users_product_count[created_user.username] = count
+            
+
         return {
-            "monthly_statistic":dict(monthly_revenue),
-            'monthly_lend_statistic': dict(monthly_lend_statistic),
-            'monthly_return_statistic': dict(monthly_returned_statistic),
+            "statistic":dict(monthly_revenue),
+            'lend_statistic': dict(monthly_lend_statistic),
+            'return_statistic': dict(monthly_returned_statistic),
             'total_count': total_count,
             'total_return_count': total_return_count,
+            "users_product_count": dict(users_product_count)
         }
 
 class YearlyStatisticsView(APIView):
@@ -859,6 +908,8 @@ class YearlyStatisticsView(APIView):
 
     def get(self, request):
         user = request.user
+        if user.role != User.DIRECTOR:
+            raise serializers.ValidationError({"error": "Siz director emasssiz shuning uchun tur yo'qol bo'ttan"})
         return Response(self.get_yearly_statistics(user))
 
     def get_yearly_statistics(self, user):
@@ -891,12 +942,19 @@ class YearlyDetailStatisticsView(APIView):
 
     def get(self, request, year):
         user = request.user
+        if user.role != User.DIRECTOR:
+            raise serializers.ValidationError({"error": "Siz director emasssiz shuning uchun tur yo'qol bo'ttan"})
         return Response(self.get_yearly_statistics(user, year))
 
     def get_yearly_statistics(self, user, year):
         yearly_revenue = defaultdict(float)
-        yearly_lend_statistic = defaultdict(int)
-        yearly_returned_statistic = defaultdict(int)
+        yearly_lend_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
+        yearly_returned_statistic = {f"{i}%": 0 for i in range(0, 101, 25)}
+        users_product_count = defaultdict(int)
+
+        start_of_year = timezone.make_aware(datetime(year, 1, 1), timezone.get_current_timezone())
+        end_of_year = timezone.make_aware(datetime(year, 12, 31, 23, 59, 59, 999999), timezone.get_current_timezone())
+
         total_count = 0
         total_return_count = 0
 
@@ -957,13 +1015,31 @@ class YearlyDetailStatisticsView(APIView):
                     yearly_returned_statistic[returned_percentage_str] += 1
                 else:
                    yearly_returned_statistic[returned_percentage_str] = 1
+        
+        created_users = user.created_users.all()
+
+        for created_user in created_users:
+            sales_count = Sale.objects.filter(
+                seller=created_user,
+                    sale_date__range=(start_of_year, end_of_year),
+                    product__created_by=user
+                ).count()
+            lending_count = Lending.objects.filter(
+                    borrow_date__range=(start_of_year, end_of_year),
+                    product__admin=user,
+                    seller=created_user
+                ).count()
+            count = lending_count + sales_count
+            users_product_count[created_user.username] = count
+        
 
         return {
-            "yearly_statistic":dict(yearly_revenue),
-            'yearly_lend_statistic': dict(yearly_lend_statistic),
-            'yearly_returned_statistic':dict(yearly_returned_statistic),
+            "statistic":dict(yearly_revenue),
+            'lend_statistic': dict(yearly_lend_statistic),
+            'returned_statistic':dict(yearly_returned_statistic),
             'total_count': total_count,
             'total_return_count': total_return_count,
+            "users_product_count":dict(users_product_count),
         }
 
 class UserStatisticsView(APIView):
@@ -989,7 +1065,8 @@ class UserStatisticsView(APIView):
         return Response(statistics)
 
     def get_daily_statistics(self, user):
-        now = timezone.now()
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        now = timezone.now().astimezone(uzbekistan_tz)
         daily_revenue = defaultdict(float)
 
         for hour in range(0, 24, 2):  # Har 2 soatda
@@ -999,21 +1076,32 @@ class UserStatisticsView(APIView):
             # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(
                 sale_date__range=(start_time, end_time),
-                product__created_by=user
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+                seller=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or Decimal(0)
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
                 borrow_date__range=(start_time, end_time),
-                product__admin=user
-            ).aggregate(Sum('const'))['const__sum'] or 0
+                # product__admin__in=[user] + list(user.created_users.all())
+                seller=user
+            ).annotate(
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),
+                    default=F('product__rental_price') * (F('percentage_value') / 100),
+                    output_field=DecimalField()
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')
+            )['total_rental_revenue'] or Decimal(0)
 
             daily_revenue[start_time.strftime("%H:%M")] = sale_revenue + lending_revenue
 
         return dict(daily_revenue)
 
     def get_weekly_statistics(self, user):
-        now = timezone.now()
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        now = timezone.now().astimezone(uzbekistan_tz)
         start_of_week = now - timezone.timedelta(days=now.weekday())  # Dushanbadan boshlanadi
         weekly_revenue = defaultdict(float)
 
@@ -1024,48 +1112,76 @@ class UserStatisticsView(APIView):
             # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(
                 sale_date__date=day,
-                product__created_by=user
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+                # product__created_by=user
+                seller=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
                 borrow_date__date=day,
-                product__admin=user
-            ).aggregate(Sum('const'))['const__sum'] or 0
+                # product__admin=user,
+                seller=user
+            ).annotate(
+                # '%' belgisini olib tashlaymiz va float ga aylantiramiz
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),  # '%' belgisini olib tashlaymiz
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),  # Agar status 'returned' bo'lsa, rental_price ni to'liq hisoblaymiz
+                    default=F('product__rental_price') * (F('percentage_value') / 100),  # Aks holda, rental_price ni percentage ga ko'paytiramiz
+                    output_field=DecimalField()  # Natijaning turini belgilaymiz
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')  # Hisoblangan rental_price ni yig'amiz
+            )['total_rental_revenue'] or Decimal(0)
 
             weekly_revenue[day_name] = sale_revenue + lending_revenue
 
         return dict(weekly_revenue)
 
     def get_monthly_statistics(self, user):
-        now = timezone.now()
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        now = timezone.now().astimezone(uzbekistan_tz)
         month = now.month
         year = now.year
         monthly_revenue = defaultdict(float)
 
         for m in range(1, 13):  # 1 dan 12 gacha
+            start_of_month = timezone.make_aware(datetime(year, m, 1), uzbekistan_tz)
+            last_day_of_month = calendar.monthrange(year, m)[1]
+            end_of_month = timezone.make_aware(datetime(year, m, last_day_of_month, 23, 59, 59, 999999), uzbekistan_tz)
             month_name = timezone.datetime(year, m, 1).strftime("%B")
+
 
             # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(
-                sale_date__year=year,
-                sale_date__month=m,
-                product__created_by=user
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+                sale_date__range=(start_of_month, end_of_month),
+                # product__created_by=user,
+                seller=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
-                borrow_date__year=year,
-                borrow_date__month=m,
-                product__admin=user
-            ).aggregate(Sum('const'))['const__sum'] or 0
+                borrow_date__range=(start_of_month, end_of_month),
+                # product__admin=user,
+                seller=user
+            ).annotate(
+                # '%' belgisini olib tashlaymiz va float ga aylantiramiz
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),  # '%' belgisini olib tashlaymiz
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),  # Agar status 'returned' bo'lsa, rental_price ni to'liq hisoblaymiz
+                    default=F('product__rental_price') * (F('percentage_value') / 100),  # Aks holda, rental_price ni percentage ga ko'paytiramiz
+                    output_field=DecimalField()  # Natijaning turini belgilaymiz
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')  # Hisoblangan rental_price ni yig'amiz
+            )['total_rental_revenue'] or Decimal(0)
 
             monthly_revenue[month_name] = sale_revenue + lending_revenue
 
         return dict(monthly_revenue)
 
     def get_yearly_statistics(self, user):
-        now = timezone.now()
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        now = timezone.now().astimezone(uzbekistan_tz)
         current_year = now.year
         yearly_revenue = defaultdict(float)
 
@@ -1073,15 +1189,114 @@ class UserStatisticsView(APIView):
             # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(
                 sale_date__year=year,
-                product__created_by=user
-            ).aggregate(Sum('sale_price'))['sale_price__sum'] or 0
+                seller=user
+            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
                 borrow_date__year=year,
-                product__admin=user
-            ).aggregate(Sum('const'))['const__sum'] or 0
+                seller=user
+            ).annotate(
+                # '%' belgisini olib tashlaymiz va float ga aylantiramiz
+                percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),  # '%' belgisini olib tashlaymiz
+                effective_rental_price=Case(
+                    When(status='RETURNED', then=F('product__rental_price')),  # Agar status 'returned' bo'lsa, rental_price ni to'liq hisoblaymiz
+                    default=F('product__rental_price') * (F('percentage_value') / 100),  # Aks holda, rental_price ni percentage ga ko'paytiramiz
+                    output_field=DecimalField()  # Natijaning turini belgilaymiz
+                )
+            ).aggregate(
+                total_rental_revenue=Sum('effective_rental_price')  # Hisoblangan rental_price ni yig'amiz
+            )['total_rental_revenue'] or Decimal(0)
 
             yearly_revenue[str(year)] = sale_revenue + lending_revenue
 
         return dict(yearly_revenue)
+
+
+class UserMonthlyIncomeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        # Parse the start_date and end_date from the request data
+        start_date_str = request.data.get('start_date')
+        end_date_str = request.data.get('end_date')
+
+        # Validate the dates
+        if not start_date_str or not end_date_str:
+            return Response({"error": "Both start_date and end_date are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Convert strings to datetime objects
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Ensure the dates are in the same month
+        if start_date.year != end_date.year or start_date.month != end_date.month:
+            return Response({"error": "start_date and end_date must be within the same month."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Make dates timezone aware
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        start_date = timezone.make_aware(start_date, uzbekistan_tz)
+        end_date = timezone.make_aware(end_date, uzbekistan_tz)
+
+        # Get the user
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user != user and request.user != user.created_by:
+            return Response({"error": "Siz bu user emassiz"})
+
+        # Calculate the number of sales
+        sales_count = Sale.objects.filter(
+            seller=user,
+            sale_date__range=(start_date, end_date)
+        ).count()
+
+        sales_kpi_total = Sale.objects.filter(
+            seller=user,
+            sale_date__range=(start_date, end_date)
+        ).annotate(
+            kpi_value=ExpressionWrapper(
+                F('sale_price') * F('quantity') * user.KPI / 100,
+                output_field=DecimalField()
+            )
+        ).aggregate(total_kpi=Sum('kpi_value'))['total_kpi'] or Decimal(0)
+
+        # Calculate the number of lendings
+        lending_count = Lending.objects.filter(
+            seller=user,
+            borrow_date__range=(start_date, end_date),
+            status="RETURNED"
+        ).count()
+        kpi = user.KPI
+
+        lending_kpi_total = Lending.objects.filter(
+            seller=user,
+            borrow_date__range=(start_date, end_date),
+            status='RETURNED'
+        ).annotate(
+            kpi_value=ExpressionWrapper(
+                F('product__rental_price') * user.KPI / 100,
+                output_field=DecimalField()
+            )
+        ).aggregate(total_kpi=Sum('kpi_value'))['total_kpi'] or Decimal(0)
+
+        response_data = {
+            "username": user.username,
+            "sales_count": sales_count,
+            "lending_count": lending_count,
+            "KPI": kpi,
+            "sales_kpi_total": sales_kpi_total,
+            "lending_kpi_total": lending_kpi_total,
+            "common_kpi_total": sales_kpi_total + lending_kpi_total
+        }
+        last_day_of_month = calendar.monthrange(start_date.year, start_date.month)[1]
+        if start_date.day == 1 and end_date.day == last_day_of_month:
+            response_data["salary"] = user.salary
+            response_data["salary_kpi"] = user.salary + sales_kpi_total + lending_kpi_total
+        # Return the results
+        return Response(response_data, status=status.HTTP_200_OK)

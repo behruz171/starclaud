@@ -36,6 +36,7 @@ urlpatterns = [
 
     path('user/image/', views.UserImageView.as_view(), name='user-image'),
     path('user/<int:user_id>/statistics/', views.UserStatisticsView.as_view(), name='user-statistics'),
+    path('user/<int:user_id>/monthly_income/', views.UserMonthlyIncomeView.as_view(), name='user-monthly-income'),
 
 
     path('statistics/', views.StatisticsView.as_view(), name='statistics'),
