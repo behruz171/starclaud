@@ -177,7 +177,7 @@ class Lending(BaseModel):
         related_name='lendings'
     )
     borrower_name = models.CharField(max_length=255)
-    borrow_date = models.DateTimeField()
+    borrow_date = models.DateTimeField(auto_now_add=True)
     return_date = models.DateField()
     actual_return_date = models.DateField(null=True, blank=True)
     AD = models.CharField(max_length=15)

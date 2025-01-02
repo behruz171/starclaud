@@ -27,7 +27,7 @@ urlpatterns = [
     path('categories/', views.CategoryListCreateView.as_view(), name='category-list'),
     # path('category-view/', views.CategoryViewSet.as_view()),
 
-     path('sellers/<int:id>/statistics/', views.SellerStatisticsView.as_view(), name='seller-statistics'),
+    path('sellers/<int:id>/statistics/', views.SellerStatisticsView.as_view(), name='seller-statistics'),
     
     # Include router URLs
     path('', include(router.urls)),
@@ -37,6 +37,7 @@ urlpatterns = [
     path('user/image/', views.UserImageView.as_view(), name='user-image'),
     path('user/<int:user_id>/statistics/', views.UserStatisticsView.as_view(), name='user-statistics'),
     path('user/<int:user_id>/monthly_income/', views.UserMonthlyIncomeView.as_view(), name='user-monthly-income'),
+    path('user/<int:user_id>/management/', views.UserManagementView.as_view(), name='user-management'),
 
 
     path('statistics/', views.StatisticsView.as_view(), name='statistics'),

@@ -45,7 +45,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Lending)
 class LendingAdmin(admin.ModelAdmin):
-    list_display = ('product', 'seller', 'borrower_name', 'borrow_date', 'return_date', 'status')
+    list_display = ('product', 'seller', 'borrower_name', 'return_date', 'status')
     list_filter = ('status', 'borrow_date')
     search_fields = ('borrower_name', 'product__name')
     

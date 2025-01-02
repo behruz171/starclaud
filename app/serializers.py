@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from decimal import Decimal
+from django.contrib.auth.hashers import make_password
 from .models import *
 from django.db.models import Sum
 
@@ -49,6 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context.get('request')
+        print(self.context)
         if not request or not request.user:
             raise serializers.ValidationError("Authentication required")
 
@@ -95,6 +97,12 @@ class UserSerializer(serializers.ModelSerializer):
             created_by=user  # Set the creator as the director
         )
         return new_user
+
+
+class UserManagementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = "__all__"  # Foydalanuvchi ma'lumotlari
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
