@@ -102,7 +102,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserManagementSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = "__all__"  # Foydalanuvchi ma'lumotlari
+        fields = "__all__"
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -300,7 +300,9 @@ class SaleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sale
-        fields = ["product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status"]
+        fields = ['id',"product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status"]
+    
+    id = serializers.IntegerField(read_only=True)
 
     def create(self, validated_data):
         # Get the authenticated user from the request context

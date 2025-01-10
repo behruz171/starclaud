@@ -327,6 +327,7 @@ class SignUpView(generics.CreateAPIView):
 class CategoryListCreateView(generics.ListCreateAPIView):
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         user = self.request.user
@@ -611,10 +612,12 @@ class DailyStatisticsView(APIView):
         total_return_count = 0
         users_product_count = defaultdict(int)
 
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)  # 00:00
-        end = now.replace(hour=23, minute=59, second=59, microsecond=999999)  # 23:59:59
+        work_start = user.work_start_time.hour
+        work_end = user.work_end_time.hour
+        start = now.replace(hour=work_start, minute=0, second=0, microsecond=0)  # 00:00
+        end = now.replace(hour=work_end, minute=59, second=59, microsecond=999999)  # 23:59:59
 
-        for hour in range(0, 24, 1):  # Har 2 soatda
+        for hour in range(work_start, work_end+1, 1):  # Har 2 soatda
             uzbekistan_tz = pytz.timezone('Asia/Tashkent')
             start_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
             end_time = start_time + timezone.timedelta(hours=1)
@@ -625,8 +628,12 @@ class DailyStatisticsView(APIView):
                 product__admin=user
             ).annotate(
                 total_price=ExpressionWrapper(
-                    F('sale_price') * F('quantity'),
-                    output_field=DecimalField()
+                    Case(
+                        When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
+                        default=F('sale_price') * F('quantity'),
+                        output_field=DecimalField()  # Ensure this is included
+                    ),
+                    output_field=DecimalField()  # This is the missing argument
                 )
             ).aggregate(
                 total_revenue=Sum('total_price')
@@ -728,7 +735,14 @@ class WeeklyStatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__date=day,
                 product__admin=user
-            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+            ).annotate(total_price=ExpressionWrapper(
+                    Case(
+                        When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
+                        default=F('sale_price') * F('quantity'),
+                        output_field=DecimalField()  # Ensure this is included
+                    ),
+                    output_field=DecimalField()  # This is the missing argument
+                )).aggregate(Sum('total_price'))['total_price__sum'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
@@ -840,7 +854,14 @@ class MonthlyStatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__date=date,
                 product__admin=user
-            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+            ).annotate(total_price=ExpressionWrapper(
+                    Case(
+                        When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
+                        default=F('sale_price') * F('quantity'),
+                        output_field=DecimalField()  # Ensure this is included
+                    ),
+                    output_field=DecimalField()  # This is the missing argument
+                )).aggregate(Sum('total_price'))['total_price__sum'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
@@ -934,7 +955,14 @@ class YearlyStatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__year=year,
                 product__admin=user
-            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+            ).annotate(total_price=ExpressionWrapper(
+                    Case(
+                        When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
+                        default=F('sale_price') * F('quantity'),
+                        output_field=DecimalField()  # Ensure this is included
+                    ),
+                    output_field=DecimalField()  # This is the missing argument
+                )).aggregate(Sum('total_price'))['total_price__sum'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
@@ -979,7 +1007,14 @@ class YearlyDetailStatisticsView(APIView):
                 sale_date__year=year,
                 sale_date__month=month,
                 product__admin=user
-            ).annotate(total_price=F('sale_price') * F('quantity')).aggregate(Sum('total_price'))['total_price__sum'] or 0
+            ).annotate(total_price=ExpressionWrapper(
+                    Case(
+                        When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
+                        default=F('sale_price') * F('quantity'),
+                        output_field=DecimalField()  # Ensure this is included
+                    ),
+                    output_field=DecimalField()  # This is the missing argument
+                )).aggregate(Sum('total_price'))['total_price__sum'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
@@ -1080,10 +1115,13 @@ class UserStatisticsView(APIView):
         uzbekistan_tz = pytz.timezone('Asia/Tashkent')
         now = timezone.now().astimezone(uzbekistan_tz)
         daily_revenue = defaultdict(int)
-
-        for hour in range(0, 24, 2):  # Har 2 soatda
+        work_start = user.work_start_time.hour
+        work_end = user.work_end_time.hour
+        start = now.replace(hour=work_start, minute=0, second=0, microsecond=0)  # 00:00
+        end = now.replace(hour=work_end, minute=59, second=59, microsecond=999999)  # 23:59:59
+        for hour in range(work_start, work_end+1,1):  # Har 2 soatda
             start_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
-            end_time = start_time + timezone.timedelta(hours=2)
+            end_time = start_time + timezone.timedelta(hours=1)
 
             # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(

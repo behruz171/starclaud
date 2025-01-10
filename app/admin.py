@@ -25,13 +25,13 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category', 'img', 'choice', 'rental_price', 'location', 'quantity')
+    list_display = ('name', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category', 'img', 'choice', 'rental_price', 'location', 'quantity', 'weight')
     list_filter = ('status', 'admin', 'category', 'choice')
     search_fields = ('name', 'description', 'category__name')
     
     fieldsets = (
         (None, {'fields': ('name', 'description', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category')}),
-        ('Product Details', {'fields': ('img', 'choice', 'rental_price', 'location', 'quantity')}),
+        ('Product Details', {'fields': ('img', 'choice', 'rental_price', 'location', 'quantity', 'weight')}),
     )
     
     def get_queryset(self, request):

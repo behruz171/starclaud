@@ -1,3 +1,4 @@
+from typing import Iterable
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -7,6 +8,7 @@ from django.contrib import admin
 from rest_framework import serializers
 from django.utils import timezone
 import pytz
+from decimal import Decimal
 
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -42,8 +44,8 @@ class User(AbstractUser):
     img = models.ImageField(upload_to='user_images/')
     age = models.PositiveIntegerField(null=True)
     gender = models.CharField(max_length=10)
-    work_start_time = models.CharField(max_length=20)
-    work_end_time = models.CharField(max_length=20)
+    work_start_time = models.TimeField(max_length=20)
+    work_end_time = models.TimeField(max_length=20)
     AD = models.CharField(max_length=15)
     JSHSHR = models.CharField(max_length=15)
     city = models.CharField(max_length=100, blank=True, null=True)
@@ -108,7 +110,7 @@ class Product(BaseModel):
     
     name = models.CharField(max_length=255)
     description = models.TextField()
-    price = models.DecimalField(max_digits=25, decimal_places=2)
+    price = models.DecimalField(max_digits=25, decimal_places=2, null=True, blank=True)
     status = models.CharField(
         max_length=15,
         choices=STATUS_CHOICES,
@@ -136,13 +138,33 @@ class Product(BaseModel):
     choice = models.CharField(max_length=4, choices=CHOICE_OPTIONS, null=False)
     rental_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     location = models.CharField(max_length=255, blank=True, null=True)
-    quantity = models.PositiveIntegerField(default=0)
+    quantity = models.PositiveIntegerField(default=0, blank=True, null=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.name} ({self.get_status_display()})"
+    
+    def save(self,*args, **kwargs):
+        if not self.quantity and not self.weight:
+            raise ValidationError("Quantity yoki Product Weight dan biri kiritilishi shart.")
+        if self.quantity and self.weight:
+            raise ValidationError("Faqat Quantity yoki Product Weight dan birini kiriting, ikkalasini emas.")
+        if self.choice == 'RENT':
+            if self.price:
+                raise ValidationError("Bu mahsulot nasiyaga berish uchun uchun")
+        if self.choice == 'SELL':
+            if self.rental_price:
+                raise ValidationError("Bu mahsulot faqat sotish uchun")
+        if self.rental_price and self.price:
+            raise ValidationError("faqat bitta malumot yuborishingiz mumkin!")
+        # if not self.price and not self.rental_price:
+        #     raise ValidationError("price yoki rental price maydonlaridan birini kiritishingiz kerak!")
+        super().save(*args, **kwargs)
+
+
 
 class Lending(BaseModel):
     LENT = 'LENT'
@@ -242,7 +264,8 @@ class Sale(BaseModel):
     buyer = models.CharField(max_length=100)
     sale_price = models.DecimalField(max_digits=10, decimal_places=2)
     sale_date = models.DateTimeField(auto_now_add=True)
-    quantity = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField(null=True, blank=True)
+    product_weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
 
     class Meta:
@@ -253,8 +276,23 @@ class Sale(BaseModel):
 
     def save(self, *args, **kwargs):
         # Mahsulotning mavjud miqdorini tekshirish
-        if self.quantity > self.product.quantity:
-            raise ValidationError("Sotilayotgan miqdor mahsulotning mavjud miqdoridan oshib ketmasligi kerak.")
+        if not self.quantity and not self.product_weight:
+            raise ValidationError("Quantity yoki Product Weight dan biri kiritilishi shart.")
+        
+        if self.quantity and self.product_weight:
+            raise ValidationError("Faqat Quantity yoki Product Weight dan birini kiriting, ikkalasini emas.")
+
+        if self.quantity:
+            if not self.product.quantity:
+                raise ValidationError("productning soni yoq")
+            if self.quantity > self.product.quantity:
+                raise ValidationError("Sotilayotgan miqdor mahsulotning mavjud miqdoridan oshib ketmasligi kerak.")
+        
+        if self.product_weight:
+            if not self.product.weight:
+                raise ValidationError("productning soni yoq")
+            if self.product_weight > self.product.weight:
+                raise ValidationError("Sotilayotgan og'irlik mahsulotning mavjud og'irligidan oshib ketmasligi kerak.")
         
         # Mahsulotning choice ni tekshirish
         if self.product.choice != 'SELL':
@@ -266,5 +304,8 @@ class Sale(BaseModel):
         super().save(*args, **kwargs)
 
         # Sotilgandan so'ng, mahsulotning miqdorini yangilash
-        self.product.quantity -= self.quantity
+        if self.quantity:
+            self.product.quantity -= self.quantity
+        elif self.product_weight:
+            self.product.weight -= Decimal(self.product_weight)
         self.product.save()
