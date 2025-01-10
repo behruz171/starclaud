@@ -340,6 +340,11 @@ class CategoryListCreateView(generics.ListCreateAPIView):
             return Category.objects.filter(created_by=user.created_by)  # Seller can see categories created by their Director
         
         return Category.objects.none()  # No categories for other roles
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({"results": serializer.data}, status=status.HTTP_200_OK)
 
     def perform_create(self, serializer):
         serializer.save()
