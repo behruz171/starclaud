@@ -1,8 +1,10 @@
-from rest_framework import serializers
+from rest_framework import serializers, generics, status
 from decimal import Decimal
 from django.contrib.auth.hashers import make_password
+from rest_framework.permissions import IsAuthenticated
 from .models import *
 from django.db.models import Sum
+from rest_framework.response import Response
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -129,6 +131,54 @@ class CategorySerializer(serializers.ModelSerializer):
         
         return super().create(validated_data)
 
+class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'  # ID orqali qidirish uchun
+
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.role == User.DIRECTOR:
+            return Category.objects.filter(created_by=user)
+        elif user.role in [User.ADMIN, User.SELLER]:
+            return Category.objects.filter(created_by=user.created_by)
+        
+        return Category.objects.none()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            # Faqat director o'zi yaratgan categoryni update qila oladi
+            if request.user.role == User.DIRECTOR and instance.created_by == request.user:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(
+                    {"error": "You don't have permission to update this category"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+                
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Faqat director o'zi yaratgan categoryni o'chira oladi
+        if request.user.role == User.DIRECTOR and instance.created_by == request.user:
+            instance.delete()
+            return Response(
+                {"message": "Category deleted successfully"}, 
+                status=status.HTTP_204_NO_CONTENT
+            )
+        else:
+            return Response(
+                {"error": "You don't have permission to delete this category"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
 class ProductSerializer(serializers.ModelSerializer):
     seller = serializers.CharField(source='created_by.username', read_only=True)
     admin = serializers.CharField(source='admin.username', read_only=True)
@@ -140,7 +190,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'price', 'status', 
                   'lend_count', 'seller', 'admin', 'created_at', 
                   'category', 'category_name', 'img', 'choice', 
-                  'rental_price', 'location', 'quantity']
+                  'rental_price', 'location', 'quantity', 'weight']
         read_only_fields = ['status', 'lend_count', 'created_at', 'seller', 'admin']
 
     def validate(self, attrs):
@@ -210,6 +260,29 @@ class LendingSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
+        if not user:
+            raise serializers.ValidationError("User information is missing.")
+        
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        current_time = timezone.now().astimezone(uzbekistan_tz)
+        current_time = current_time.time()
+
+        # Get director's working hours
+        if user.role == User.DIRECTOR:
+            work_start = user.work_start_time
+            work_end = user.work_end_time
+        else:
+            # If user is ADMIN or SELLER, get their director's working hours
+            director = user.created_by
+            work_start = director.work_start_time
+            work_end = director.work_end_time
+        
+        if not (work_start <= current_time <= work_end):
+            raise serializers.ValidationError({
+                "error": "Faqat berilgan vaqt oraligida ijaraga berishingiz mumkin",
+                "working_hours": f"{work_start} dan {work_end} gacha"
+            }, code=status.HTTP_403_FORBIDDEN)
+        
         validated_data['seller'] = user
         return super().create(validated_data)
 
@@ -300,7 +373,7 @@ class SaleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sale
-        fields = ['id',"product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status"]
+        fields = ['id',"product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status", 'product_weight']
     
     id = serializers.IntegerField(read_only=True)
 
@@ -312,11 +385,30 @@ class SaleSerializer(serializers.ModelSerializer):
         if not seller:
             raise serializers.ValidationError("Seller information is missing.")
 
+        # Get current time in Uzbekistan timezone
+        uzbekistan_tz = pytz.timezone('Asia/Tashkent')
+        current_time = timezone.now().astimezone(uzbekistan_tz)
+        current_time = current_time.time()
+
+        # Get director's working hours
+        if seller.role == User.DIRECTOR:
+            work_start = seller.work_start_time
+            work_end = seller.work_end_time
+        else:
+            # If seller is ADMIN or SELLER, get their director's working hours
+            director = seller.created_by
+            work_start = director.work_start_time
+            work_end = director.work_end_time
+
+        # Check if current time is within working hours
+        if not (work_start <= current_time <= work_end):
+            raise serializers.ValidationError({
+                "error": "Faqat belgilangan vaqtda sotishingiz kerak",
+                "working_hours": f"{work_start} dan {work_end} gacha"
+            }, code=status.HTTP_403_FORBIDDEN)
+
         # Create the Sale instance with the authenticated user as the seller
         sale = Sale.objects.create(seller=seller, **validated_data)
-
-        # Update product quantity after sale creation
-        # sale.product.quantity -= sale.quantity
         sale.product.save()
 
         return sale

@@ -228,7 +228,9 @@ class Lending(BaseModel):
         print(self.product.admin)
         if self.seller != self.product.admin and self.seller.created_by != self.product.admin:
             raise ValidationError("Sellers can only lend their own products")
-            
+        if self.product.choice != 'RENT':
+            raise ValidationError("Bu mahsulot ijaraga berish uchun emas")
+
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)

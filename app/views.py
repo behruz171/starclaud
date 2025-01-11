@@ -12,7 +12,7 @@ from .models import *
 from .serializers import *
 from django.db.models import Q
 from django.utils import timezone
-from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField, ExpressionWrapper
+from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField, ExpressionWrapper, Count
 from django.db.models.functions import Cast, Replace
 from collections import defaultdict
 from decimal import Decimal
@@ -236,6 +236,10 @@ class LendingViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 {"product": "Product is not available for lending"}
             )
+        # if product.choice != 'RENT':
+        #     raise serializers.ValidationError(
+        #         {"product": "Product"}
+        #     )
             
         if product.admin != self.request.user and product.admin != self.request.user.created_by:
             raise exceptions.PermissionDenied(
@@ -699,6 +703,36 @@ class DailyStatisticsView(APIView):
                 ).count()
                 count = lending_count + sales_count
                 users_product_count[created_user.username] = count
+        
+        top_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start, end),
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('-total_quantity')[:10]
+
+        # Format the top products data
+        top_products_list = [
+            {
+                'id': item['product__id'],
+                'name': item['product__name'],
+                'price': item['product__price'],
+                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
+                'total_sales': item['total_sales']
+            }
+            for item in top_products
+        ]
 
         return {
             'statistic': dict(daily_revenue),
@@ -706,7 +740,8 @@ class DailyStatisticsView(APIView):
             'return_statistic': dict(daily_returned_statistic),
             'total_count': total_count,
             'total_return_count': total_return_count,
-            'users_product_count': dict(users_product_count)
+            'users_product_count': dict(users_product_count),
+            'top_products': top_products_list,
         }
 
 
@@ -809,7 +844,35 @@ class WeeklyStatisticsView(APIView):
                 ).count()
                 count = lending_count + sales_count
                 users_product_count[created_user.username] = count
+        top_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start_of_week, end_of_week),
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('-total_quantity')[:10]
 
+        # Format the top products data
+        top_products_list = [
+            {
+                'id': item['product__id'],
+                'name': item['product__name'],
+                'price': item['product__price'],
+                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
+                'total_sales': item['total_sales']
+            }
+            for item in top_products
+        ]
                 
 
         return {
@@ -818,7 +881,8 @@ class WeeklyStatisticsView(APIView):
             'return_statistic': dict(weekly_returned_statistic),
             'total_count': total_count,
             'total_return_count': total_return_count,
-            "users_product_count": dict(users_product_count)
+            "users_product_count": dict(users_product_count),
+            'top_products': top_products_list
         
         }
 
@@ -930,7 +994,36 @@ class MonthlyStatisticsView(APIView):
                 ).count()
                 count = lending_count + sales_count
                 users_product_count[created_user.username] = count
-            
+
+        top_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start_of_month, end_of_month),
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('-total_quantity')[:10]
+
+        # Format the top products data
+        top_products_list = [
+            {
+                'id': item['product__id'],
+                'name': item['product__name'],
+                'price': item['product__price'],
+                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
+                'total_sales': item['total_sales']
+            }
+            for item in top_products
+        ]    
 
         return {
             "statistic":dict(monthly_revenue),
@@ -938,7 +1031,8 @@ class MonthlyStatisticsView(APIView):
             'return_statistic': dict(monthly_returned_statistic),
             'total_count': total_count,
             'total_return_count': total_return_count,
-            "users_product_count": dict(users_product_count)
+            "users_product_count": dict(users_product_count),
+            'top_products': top_products_list
         }
 
 class YearlyStatisticsView(APIView):
@@ -1084,6 +1178,35 @@ class YearlyDetailStatisticsView(APIView):
             count = lending_count + sales_count
             users_product_count[created_user.username] = count
         
+        top_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start_of_year, end_of_year),
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('-total_quantity')[:10]
+
+        # Format the top products data
+        top_products_list = [
+            {
+                'id': item['product__id'],
+                'name': item['product__name'],
+                'price': item['product__price'],
+                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
+                'total_sales': item['total_sales']
+            }
+            for item in top_products
+        ]
 
         return {
             "statistic":dict(yearly_revenue),
@@ -1092,6 +1215,7 @@ class YearlyDetailStatisticsView(APIView):
             'total_count': total_count,
             'total_return_count': total_return_count,
             "users_product_count":dict(users_product_count),
+            'top_products': top_products_list
         }
 
 class UserStatisticsView(APIView):

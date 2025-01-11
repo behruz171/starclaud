@@ -25,6 +25,7 @@ urlpatterns = [
     
     # Category URLs
     path('categories/', views.CategoryListCreateView.as_view(), name='category-list'),
+    path('categories/<int:pk>/', views.CategoryDetailView.as_view(), name='category-detail'),
     # path('category-view/', views.CategoryViewSet.as_view()),
 
     path('sellers/<int:id>/statistics/', views.SellerStatisticsView.as_view(), name='seller-statistics'),
