@@ -52,18 +52,29 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context.get('request')
-        print(self.context)
         if not request or not request.user:
             raise serializers.ValidationError("Authentication required")
 
-        # Faqat director user yarata oladi
-        if request.user.role != User.DIRECTOR:
-            raise serializers.ValidationError("Only Director can create users")
-        print(attrs)
+        user = request.user
         role = attrs.get('role', '').upper()
-        print(f"bu role - {role}")
-        if role not in [User.ADMIN, User.SELLER]:
-            raise serializers.ValidationError("Invalid role. Must be ADMIN or SELLER")
+
+        # Director ADMIN va SELLER yarata oladi
+        if user.role == User.DIRECTOR:
+            if role not in [User.ADMIN, User.SELLER]:
+                raise serializers.ValidationError({
+                    "error": "Director can only create admins or sellers"
+                })
+        # Admin faqat SELLER yarata oladi
+        elif user.role == User.ADMIN:
+            if role != User.SELLER:
+                raise serializers.ValidationError({
+                    "error": "Admin can only create sellers"
+                })
+        # Boshqalar yarata olmaydi
+        else:
+            raise serializers.ValidationError({
+                "error": "You do not have permission to create users"
+            })
 
         attrs['role'] = role
         return attrs
@@ -72,8 +83,15 @@ class UserSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         # Ensure the user is a director to create other users
         print(validated_data)
-        if user.role != User.DIRECTOR:
-            raise serializers.ValidationError("Only Director can create users")
+        if user.role == User.DIRECTOR:
+            created_by = user
+        # Admin faqat SELLER yarata oladi
+        elif user.role == User.ADMIN and validated_data.get('role') == User.SELLER:
+            created_by = user.created_by  # Director as creator
+        else:
+            raise serializers.ValidationError({
+                "error": "You do not have permission to create users"
+            })
         
         # Create the user and set the created_by field
         new_user = User.objects.create_user(
@@ -96,7 +114,7 @@ class UserSerializer(serializers.ModelSerializer):
             salary=validated_data.get('salary',0),
             KPI=validated_data.get("KPI", 0),
 
-            created_by=user  # Set the creator as the director
+            created_by=created_by  # Set the creator as the director
         )
         return new_user
 

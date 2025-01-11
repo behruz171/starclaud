@@ -292,30 +292,41 @@ class SignUpView(generics.CreateAPIView):
         user = request.user
         role = request.data.get('role', '').upper()
 
-        # Faqat director user yarata oladi
-        if user.role != User.DIRECTOR:
+        if user.role == User.DIRECTOR:
+            if role not in [User.ADMIN, User.SELLER]:
+                return Response({
+                    'status': 'error',
+                    'message': 'Director can only create admins or sellers'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        elif user.role == User.ADMIN:
+            if role != User.SELLER:
+                return Response({
+                    'status': 'error',
+                    'message': 'Admin can only create sellers'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
             return Response({
                 'status': 'error',
-                'message': 'Only Director can create users'
+                'message': 'You do not have permission to create users'
             }, status=status.HTTP_403_FORBIDDEN)
-
-        # Director faqat ADMIN yoki SELLER yarata oladi
-        if role not in [User.ADMIN, User.SELLER]:
-            return Response({
-                'status': 'error',
-                'message': 'Director can only create admins or sellers'
-            }, status=status.HTTP_400_BAD_REQUEST)
 
         # Update request data with uppercase role
         request.data['role'] = role
-        print(request.data)
         serializer = self.get_serializer(data=request.data)
+        
         if serializer.is_valid():
-            # Har doim created_by = director
-            new_user = serializer.save(
-                role=role,
-                created_by=request.user  # Director as creator
-            )
+            # Admin seller yaratganda created_by directorga bog'lanadi
+            if user.role == User.ADMIN and role == User.SELLER:
+                new_user = serializer.save(
+                    role=role,
+                    created_by=user.created_by  # Director as creator
+                )
+            else:
+                # Director yaratganda o'ziga bog'lanadi
+                new_user = serializer.save(
+                    role=role,
+                    created_by=user  # Director as creator
+                )
             
             return Response({
                 'status': 'success',
@@ -324,7 +335,7 @@ class SignUpView(generics.CreateAPIView):
             }, status=status.HTTP_201_CREATED)
             
         return Response({
-            'status': 'errorrr',
+            'status': 'error',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
