@@ -12,8 +12,8 @@ from .models import *
 from .serializers import *
 from django.db.models import Q
 from django.utils import timezone
-from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField, ExpressionWrapper, Count
-from django.db.models.functions import Cast, Replace
+from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField, ExpressionWrapper, Count, IntegerField
+from django.db.models.functions import Cast, Replace, Coalesce
 from collections import defaultdict
 from decimal import Decimal
 import pytz
@@ -160,7 +160,7 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
         product = self.get_object()
 
         # Only creator can update their products
-        if product.created_by != user:
+        if product.admin != user and user.role == User.SELLER:
             raise exceptions.PermissionDenied(
                 "You can only update your own products"
             )
@@ -636,7 +636,7 @@ class DailyStatisticsView(APIView):
         work_end = user.work_end_time.hour
         start = now.replace(hour=work_start, minute=0, second=0, microsecond=0)  # 00:00
         end = now.replace(hour=work_end, minute=59, second=59, microsecond=999999)  # 23:59:59
-
+        print(work_start, work_end)
         for hour in range(work_start, work_end+1, 1):  # Har 2 soatda
             uzbekistan_tz = pytz.timezone('Asia/Tashkent')
             start_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
@@ -717,7 +717,7 @@ class DailyStatisticsView(APIView):
         
         top_products = Sale.objects.filter(
             product__admin=user,
-            sale_date__range=(start, end),
+            sale_date__range=(start, end)
         ).values(
             'product__id',
             'product__name',
@@ -731,19 +731,29 @@ class DailyStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('-total_quantity')[:10]
+        ).order_by('-total_quantity').distinct()[:10]
 
-        # Format the top products data
-        top_products_list = [
-            {
-                'id': item['product__id'],
-                'name': item['product__name'],
-                'price': item['product__price'],
-                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
-                'total_sales': item['total_sales']
-            }
-            for item in top_products
-        ]
+        # Get bottom 10 least sold products (excluding products from top 10)
+        excluded_ids = [p['product__id'] for p in top_products]
+        bottom_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start, end)
+        ).exclude(
+            product__id__in=excluded_ids
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
 
         return {
             'statistic': dict(daily_revenue),
@@ -752,7 +762,24 @@ class DailyStatisticsView(APIView):
             'total_count': total_count,
             'total_return_count': total_return_count,
             'users_product_count': dict(users_product_count),
-            'top_products': top_products_list,
+            'top_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in top_products
+            ],
+            'bottom_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in bottom_products
+            ]
         }
 
 
@@ -855,9 +882,10 @@ class WeeklyStatisticsView(APIView):
                 ).count()
                 count = lending_count + sales_count
                 users_product_count[created_user.username] = count
+
         top_products = Sale.objects.filter(
             product__admin=user,
-            sale_date__range=(start_of_week, end_of_week),
+            sale_date__range=(start_of_week, end_of_week)
         ).values(
             'product__id',
             'product__name',
@@ -871,20 +899,30 @@ class WeeklyStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('-total_quantity')[:10]
+        ).order_by('-total_quantity').distinct()[:10]
 
-        # Format the top products data
-        top_products_list = [
-            {
-                'id': item['product__id'],
-                'name': item['product__name'],
-                'price': item['product__price'],
-                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
-                'total_sales': item['total_sales']
-            }
-            for item in top_products
-        ]
-                
+        # Get bottom 10 least sold products (excluding products from top 10)
+        excluded_ids = [p['product__id'] for p in top_products]
+        bottom_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start_of_week, end_of_week)
+        ).exclude(
+            product__id__in=excluded_ids
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
+
 
         return {
             "statistic":dict(weekly_revenue),
@@ -893,7 +931,24 @@ class WeeklyStatisticsView(APIView):
             'total_count': total_count,
             'total_return_count': total_return_count,
             "users_product_count": dict(users_product_count),
-            'top_products': top_products_list
+            'top_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in top_products
+            ],
+            'bottom_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in bottom_products
+            ]
         
         }
 
@@ -1008,7 +1063,7 @@ class MonthlyStatisticsView(APIView):
 
         top_products = Sale.objects.filter(
             product__admin=user,
-            sale_date__range=(start_of_month, end_of_month),
+            sale_date__range=(start_of_month, end_of_month)
         ).values(
             'product__id',
             'product__name',
@@ -1022,19 +1077,30 @@ class MonthlyStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('-total_quantity')[:10]
+        ).order_by('-total_quantity').distinct()[:10]
 
-        # Format the top products data
-        top_products_list = [
-            {
-                'id': item['product__id'],
-                'name': item['product__name'],
-                'price': item['product__price'],
-                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
-                'total_sales': item['total_sales']
-            }
-            for item in top_products
-        ]    
+        # Get bottom 10 least sold products (excluding products from top 10)
+        excluded_ids = [p['product__id'] for p in top_products]
+        bottom_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start_of_month, end_of_month)
+        ).exclude(
+            product__id__in=excluded_ids
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
+
 
         return {
             "statistic":dict(monthly_revenue),
@@ -1043,7 +1109,24 @@ class MonthlyStatisticsView(APIView):
             'total_count': total_count,
             'total_return_count': total_return_count,
             "users_product_count": dict(users_product_count),
-            'top_products': top_products_list
+            'top_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in top_products
+            ],
+            'bottom_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in bottom_products
+            ]
         }
 
 class YearlyStatisticsView(APIView):
@@ -1191,7 +1274,7 @@ class YearlyDetailStatisticsView(APIView):
         
         top_products = Sale.objects.filter(
             product__admin=user,
-            sale_date__range=(start_of_year, end_of_year),
+            sale_date__range=(start_of_year, end_of_year)
         ).values(
             'product__id',
             'product__name',
@@ -1205,19 +1288,30 @@ class YearlyDetailStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('-total_quantity')[:10]
+        ).order_by('-total_quantity').distinct()[:10]
 
-        # Format the top products data
-        top_products_list = [
-            {
-                'id': item['product__id'],
-                'name': item['product__name'],
-                'price': item['product__price'],
-                'total_quantity': float(item['total_quantity']) if item['total_quantity'] else 0,
-                'total_sales': item['total_sales']
-            }
-            for item in top_products
-        ]
+        # Get bottom 10 least sold products (excluding products from top 10)
+        excluded_ids = [p['product__id'] for p in top_products]
+        bottom_products = Sale.objects.filter(
+            product__admin=user,
+            sale_date__range=(start_of_year, end_of_year)
+        ).exclude(
+            product__id__in=excluded_ids
+        ).values(
+            'product__id',
+            'product__name',
+            'product__price'
+        ).annotate(
+            total_quantity=Sum(
+                Case(
+                    When(product_weight__isnull=False, then=F('product_weight')),
+                    default=F('quantity'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_sales=Count('id')
+        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
+
 
         return {
             "statistic":dict(yearly_revenue),
@@ -1226,7 +1320,24 @@ class YearlyDetailStatisticsView(APIView):
             'total_count': total_count,
             'total_return_count': total_return_count,
             "users_product_count":dict(users_product_count),
-            'top_products': top_products_list
+            'top_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in top_products
+            ],
+            'bottom_products': [
+                {
+                    'id': product['product__id'],
+                    'name': product['product__name'],
+                    'price': product['product__price'],
+                    'total_sales': product['total_sales']
+                } 
+                for product in bottom_products
+            ]
         }
 
 class UserStatisticsView(APIView):
@@ -1239,8 +1350,25 @@ class UserStatisticsView(APIView):
         except User.DoesNotExist:
             return Response({'status': 'error', 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user != user and request.user != user.created_by:
-            return Response({'status': 'error', 'message': 'You do not have permission to view this user\'s statistics.'}, status=status.HTTP_403_FORBIDDEN)
+        if request.user.role == User.SELLER:
+            # Seller hech qanday ma'lumotlarni ko'ra olmaydi
+            return Response({
+                'error': 'Sellers do not have permission to view user information'
+            }, status=status.HTTP_403_FORBIDDEN)
+        if user.created_by is None:
+        # Agar user director bo'lsa (created_by = None)
+            if request.user != user:
+                return Response({
+                    'error': 'You do not have permission to view this user'
+                }, status=status.HTTP_403_FORBIDDEN)
+        # Director va Admin uchun tekshirish
+        else:
+        # Admin va boshqa userlar uchun
+            if (request.user != user.created_by and          # Directori
+                request.user not in user.created_by.created_users.filter(role=User.ADMIN)):  # Admini
+                return Response({
+                    'error': 'You do not have permission to view this user'
+                }, status=status.HTTP_403_FORBIDDEN)
         # Statistika hisoblash
         statistics = {
             'daily': self.get_daily_statistics(user),
@@ -1315,51 +1443,58 @@ class UserStatisticsView(APIView):
         year = now.year
         monthly_revenue = defaultdict(float)
 
-        for m in range(1, 13):  # 1 dan 12 gacha
-            start_of_month = timezone.make_aware(datetime(year, m, 1), uzbekistan_tz)
-            last_day_of_month = calendar.monthrange(year, m)[1]
-            end_of_month = timezone.make_aware(datetime(year, m, last_day_of_month, 23, 59, 59, 999999), uzbekistan_tz)
-            month_name = timezone.datetime(year, m, 1).strftime("%B")
+        start_of_month = now.replace(day=1)
+        last_day_of_month = calendar.monthrange(year, month)[1]
+        end_of_month = now.replace(day=last_day_of_month)
 
+        for day in range(1, 32):  # 1 dan 31 gacha
+            try:
+                date = timezone.datetime(year, month, day)
+            except ValueError:
+                # Agar bu oyda bunday kun bo'lmasa, davom etamiz
+                continue
 
-            # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(
-                sale_date__range=(start_of_month, end_of_month),
+                sale_date__date=date,
                 # product__created_by=user,
                 seller=user
             ).aggregate(total_quantity=Sum('quantity'))['total_quantity'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
-                borrow_date__range=(start_of_month, end_of_month),
+                borrow_date__date=date,
                 # product__admin=user,
                 seller=user
             ).count()
 
-            monthly_revenue[month_name] = sale_revenue + lending_revenue
+            monthly_revenue[date.strftime("%d")] = sale_revenue + lending_revenue  # Kun raqami
 
         return dict(monthly_revenue)
 
     def get_yearly_statistics(self, user):
         uzbekistan_tz = pytz.timezone('Asia/Tashkent')
         now = timezone.now().astimezone(uzbekistan_tz)
-        current_year = now.year
         yearly_revenue = defaultdict(float)
+        start_of_year = now.replace(month=1, day=1)
 
-        for year in range(current_year - 4, current_year + 1):  # 2 yil oldin va hozirgi yil
+        for month in range(1, 13):  # 1 dan 12 gacha
+            month_date = start_of_year.replace(month=month)  # 2 yil oldin va hozirgi yil
             # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(
-                sale_date__year=year,
+                sale_date__year=now.year,
+                sale_date__month=month,
                 seller=user
             ).aggregate(total_quantity=Sum('quantity'))['total_quantity'] or 0
 
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
-                borrow_date__year=year,
+                borrow_date__year=now.year,
+                borrow_date__month=month,
                 seller=user
             ).count()
 
-            yearly_revenue[str(year)] = sale_revenue + lending_revenue
+            total_revenue = sale_revenue + lending_revenue
+            yearly_revenue[month_date.strftime("%B")] = total_revenue
 
         return dict(yearly_revenue)
 
