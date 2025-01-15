@@ -10,8 +10,39 @@ class CustomUserAdmin(UserAdmin):
     
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('img','first_name', 'last_name', 'age', 'gender', 'work_start_time', 'work_end_time', 'AD', 'JSHSHR', 'city', 'district', 'neighborhood', 'street', 'salary', 'KPI')}),
-        ('Permissions', {'fields': ('role', 'created_by', 'is_active')}),
+        ('Personal info', {
+            'fields': (
+                'first_name', 
+                'last_name', 
+                'email',
+                'work_start_time',  # Add this
+                'work_end_time',    # Add this
+                # ... other fields ...
+            )
+        }),
+        ('Permissions', {
+            'fields': (
+                'is_active',
+                'is_staff',
+                'is_superuser',
+                'groups',
+                'user_permissions'
+            )
+        }),
+    )
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': (
+                'username', 
+                'password1', 
+                'password2',
+                'work_start_time',  # Add this
+                'work_end_time',    # Add this
+                # ... other required fields ...
+            ),
+        }),
     )
     
     def get_queryset(self, request):
