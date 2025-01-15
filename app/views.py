@@ -417,11 +417,68 @@ class UserListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        today = timezone.now()
+        month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if today.month == 12:
+            month_end = today.replace(year=today.year + 1, month=1, day=1)
+        else:
+            month_end = today.replace(month=today.month + 1, day=1)
+
         if user.role == User.DIRECTOR:
-            return User.objects.filter(created_by=user)  # DIRECTOR barcha foydalanuvchilarni ko'radi
+            return User.objects.filter(created_by=user).annotate(
+                monthly_sales=Count(
+                    'sales',
+                    filter=Q(sales__sale_date__range=(month_start, month_end))
+                ),
+                monthly_lendings=Count(
+                    'lendings',
+                    filter=Q(lendings__borrow_date__range=(month_start, month_end))
+                ),
+                total_products_sold=Sum(
+                    Case(
+                        When(
+                            sales__sale_date__range=(month_start, month_end),
+                            sales__product_weight__isnull=False,
+                            then=F('sales__product_weight')
+                        ),
+                        When(
+                            sales__sale_date__range=(month_start, month_end),
+                            then=F('sales__quantity')
+                        ),
+                        default=0,
+                        output_field=DecimalField()
+                    )
+                )
+            )  # DIRECTOR barcha foydalanuvchilarni ko'radi
+
         elif user.role == User.ADMIN:
-            return User.objects.filter(created_by=user.created_by)  # ADMIN o'zining direktoriga tegishli foydalanuvchilarni ko'radi
-        return User.objects.none()  # Boshqa rollar uchun hech narsa ko'rsatilmaydi
+            return User.objects.filter(created_by=user.created_by).annotate(
+                monthly_sales=Count(
+                    'sales',
+                    filter=Q(sales__sale_date__range=(month_start, month_end))
+                ),
+                monthly_lendings=Count(
+                    'lendings',
+                    filter=Q(lendings__borrow_date__range=(month_start, month_end))
+                ),
+                total_products_sold=Sum(
+                    Case(
+                        When(
+                            sales__sale_date__range=(month_start, month_end),
+                            sales__product_weight__isnull=False,
+                            then=F('sales__product_weight')
+                        ),
+                        When(
+                            sales__sale_date__range=(month_start, month_end),
+                            then=F('sales__quantity')
+                        ),
+                        default=0,
+                        output_field=DecimalField()
+                    )
+                )
+            )  # ADMIN o'zining direktoriga tegishli foydalanuvchilarni ko'radi
+
+        return User.objects.none()
 
 
 
@@ -1651,3 +1708,12 @@ class UserManagementView(APIView):
 
         user_to_delete.delete()
         return Response({"success": "User deleted successfully."}, status=status.HTTP_200_OK)
+
+
+class VideoQollanmaListView(generics.ListAPIView):
+    serializer_class = VideoQollanmaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return VideoQollanma.objects.filter(role=user.role)

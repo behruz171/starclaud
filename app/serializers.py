@@ -8,9 +8,16 @@ from rest_framework.response import Response
 
 
 class UserListSerializer(serializers.ModelSerializer):
+    monthly_sales = serializers.IntegerField(read_only=True)
+    monthly_lendings = serializers.IntegerField(read_only=True)
+    total_products_sold = serializers.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True
+    )
     class Meta:
         model = User
-        fields = ["id","img","first_name" ,"username", "role", "KPI", "salary"]
+        fields = ["id","img","first_name" ,"username", "role", "KPI", "salary", 'monthly_sales','monthly_lendings', 'total_products_sold' ]
 
 class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,7 +25,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'role', 'img', 'age', 'gender', 
                   'work_start_time', 'work_end_time', 'AD', 'JSHSHR', 
                   'city', 'district', 'neighborhood', 'street', 
-                  'salary', 'KPI']
+                  'salary', 'KPI', 'is_convicted','is_married',]
         read_only_fields = fields
 
 class UserSerializer(serializers.ModelSerializer):
@@ -450,3 +457,9 @@ class StatisticsSerializer(serializers.Serializer):
     total_lendings = serializers.IntegerField()
     total_sales = serializers.IntegerField()
     total_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class VideoQollanmaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VideoQollanma
+        fields = ['id', 'title', 'youtube_link', 'youtube_link_img', 'img', 'role']

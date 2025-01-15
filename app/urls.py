@@ -46,5 +46,7 @@ urlpatterns = [
     path('statistics/weekly/', views.WeeklyStatisticsView.as_view(), name='weekly-statistics'),
     path('statistics/monthly/', views.MonthlyStatisticsView.as_view(), name='monthly-statistics'),
     path('statistics/yearly/', views.YearlyStatisticsView.as_view(), name='yearly-statistics'),
-    path('statistics/yearly/<int:year>/', views.YearlyDetailStatisticsView.as_view(), name='yearly-statistics')
+    path('statistics/yearly/<int:year>/', views.YearlyDetailStatisticsView.as_view(), name='yearly-statistics'),
+
+    path('videoqollanma/', views.VideoQollanmaListView.as_view(), name='videoqollanma-list'),
 ] 

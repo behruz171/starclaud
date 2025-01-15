@@ -17,7 +17,8 @@ class CustomUserAdmin(UserAdmin):
                 'email',
                 'work_start_time',  # Add this
                 'work_end_time',    # Add this
-                # ... other fields ...
+                'is_convicted',  # Sudlanganmi
+                'is_married',
             )
         }),
         ('Permissions', {
@@ -90,3 +91,9 @@ class LendingAdmin(admin.ModelAdmin):
         return qs
 admin.site.register(Category)
 admin.site.register(Sale)
+
+class VideoQollanmaAdmin(admin.ModelAdmin):
+    list_display = ('title', 'youtube_link', 'img')  # Ko'rsatmoqchi bo'lgan maydonlar
+    search_fields = ('title',)  # Qidirish maydoni
+
+admin.site.register(VideoQollanma, VideoQollanmaAdmin)

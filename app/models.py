@@ -9,6 +9,7 @@ from rest_framework import serializers
 from django.utils import timezone
 import pytz
 from decimal import Decimal
+from django.utils.timezone import now
 
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -22,6 +23,16 @@ class User(AbstractUser):
     DIRECTOR = 'DIRECTOR'
     ADMIN = 'ADMIN'
     SELLER = 'SELLER'
+
+    CONVICTED_CHOICES = [
+        ('yes', 'Ha'),
+        ('no', 'Yoq')
+    ]
+
+    MARRIED_CHOICES = [
+        ('yes', 'Ha'),
+        ('no', 'Yoq')
+    ]
     
     ROLE_CHOICES = [
         (DIRECTOR, 'Director'),
@@ -44,8 +55,8 @@ class User(AbstractUser):
     img = models.ImageField(upload_to='user_images/')
     age = models.PositiveIntegerField(null=True)
     gender = models.CharField(max_length=10)
-    work_start_time = models.TimeField(max_length=20)
-    work_end_time = models.TimeField(max_length=20)
+    work_start_time = models.TimeField(max_length=20, default=now)
+    work_end_time = models.TimeField(max_length=20, default=now)
     AD = models.CharField(max_length=15)
     JSHSHR = models.CharField(max_length=15)
     city = models.CharField(max_length=100, blank=True, null=True)
@@ -54,6 +65,19 @@ class User(AbstractUser):
     street = models.CharField(max_length=100,blank=True, null=True)
     salary = models.DecimalField(max_digits=12, decimal_places=2, null=False, default=0.00)
     KPI = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    is_convicted = models.CharField(
+        max_length=3,
+        choices=CONVICTED_CHOICES,
+        null=True,
+        blank=True  # Dastlabki qiymati "Yoq"
+    )  # Sudlanganmi
+
+    is_married = models.CharField(
+        max_length=3,
+        choices=MARRIED_CHOICES,
+        null=True,
+        blank=True # Dastlabki qiymati "Yoq"
+    )  # Oilalik
 
     class Meta:
         ordering = ['username']
@@ -311,3 +335,20 @@ class Sale(BaseModel):
         elif self.product_weight:
             self.product.weight -= Decimal(self.product_weight)
         self.product.save()
+
+
+class VideoQollanma(models.Model):
+    ROLE_CHOICES = [
+        ('SELLER', 'Seller'),
+        ('ADMIN', 'Admin'),
+        ('DIRECTOR', 'Director'),
+    ]
+
+    title = models.CharField(max_length=255)  # Video qollanmaning sarlavhasi
+    youtube_link = models.URLField(max_length=200)  # Youtube video linki
+    youtube_link_img = models.URLField(max_length=200)  # Youtube video rasm linki
+    img = models.ImageField(upload_to='video_qollanma_images/')  # Video qollanma uchun rasm
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)  # Role tanlovi
+
+    def __str__(self):
+        return self.title
