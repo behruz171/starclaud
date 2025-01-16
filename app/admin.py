@@ -12,9 +12,21 @@ class CustomUserAdmin(UserAdmin):
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {
             'fields': (
+                'img',
                 'first_name', 
                 'last_name', 
                 'email',
+                'role',
+                'age',
+                'gender',
+                'AD',
+                'JSHSHR',
+                'city',
+                'district',
+                'neighborhood',
+                'street',
+                'salary',
+                'KPI',
                 'work_start_time',  # Add this
                 'work_end_time',    # Add this
                 'is_convicted',  # Sudlanganmi
