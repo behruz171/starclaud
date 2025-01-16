@@ -218,13 +218,39 @@ class LendingViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:  # Foydalanuvchi autentifikatsiya qilinganligini tekshirish
            return Lending.objects.none()
         
+        rental_price_from = self.request.query_params.get('from', None)
+        rental_price_to = self.request.query_params.get('to', None)
+        
+        queryset = Lending.objects.none()
         if user.role == User.ADMIN or user.role == User.SELLER:
-            return Lending.objects.filter(product__admin=user.created_by, status=Lending.LENT)
+            queryset = Lending.objects.filter(product__admin=user.created_by, status=Lending.LENT)
         elif user.role == User.DIRECTOR:
-            return Lending.objects.filter(product__admin=user, status=Lending.LENT)
+            queryset = Lending.objects.filter(product__admin=user, status=Lending.LENT)
         # elif user.role == User.SELLER:
         #     return Lending.objects.filter(seller=user)
-        return Lending.objects.none()
+        if rental_price_from is not None and rental_price_to is not None:
+            queryset = queryset.filter(product__rental_price__gte=rental_price_from, product__rental_price__lte=rental_price_to)
+        
+        count_filter = self.request.query_params.get('count', None)
+        if count_filter in ['many', 'less']:
+            # Calculate total lend count for each product
+            total_lend_count = queryset.aggregate(total=Sum('product__lend_count'))['total'] or 0  # Sum of lend_count from Product
+            product_count = queryset.values('product').distinct().count()
+            print(total_lend_count)
+            if product_count > 0:
+                average_lend_count = total_lend_count // product_count  # Calculate average lend count
+                # print(total_lend_count, product_count)
+                # Get the product IDs based on the lend count
+                product_ids = queryset.values('product').annotate(lend_count=Sum('product__lend_count'))
+
+                if count_filter == 'many':
+                    # Filter products with lend count greater than the average
+                    queryset = queryset.filter(product__in=product_ids.filter(lend_count__gt=average_lend_count).values('product'))
+                elif count_filter == 'less':
+                    # Filter products with lend count less than the average
+                    queryset = queryset.filter(product__in=product_ids.filter(lend_count__lt=average_lend_count).values('product'))
+
+        return queryset
 
     def perform_create(self, serializer):
         # if self.request.user.role != User.SELLER:
@@ -511,12 +537,42 @@ class SaleViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Sale.objects.none()
         
+        # Get the 'from' and 'to' query parameters for sale_price
+        sale_price_from = self.request.query_params.get('from', None)
+        sale_price_to = self.request.query_params.get('to', None)
+
+        # Start with the base queryset
+        queryset = Sale.objects.none()
+
         if user.role == User.ADMIN or user.role == User.SELLER:
-            return Sale.objects.filter(product__admin=user.created_by)
+            queryset = Sale.objects.filter(product__admin=user.created_by)
         elif user.role == User.DIRECTOR:
-            return Sale.objects.filter(product__admin=user)
+            queryset = Sale.objects.filter(product__admin=user)
+
+        # Apply sale price filtering if 'from' and 'to' are provided
+        if sale_price_from is not None and sale_price_to is not None:
+            queryset = queryset.filter(sale_price__gte=sale_price_from, sale_price__lte=sale_price_to)
         
-        return Sale.objects.none()
+        count_filter = self.request.query_params.get('count', None)
+        if count_filter in ['many', 'less']:
+            # Calculate total quantity sold and count of distinct products
+            total_sales = queryset.aggregate(total_quantity=Sum('quantity'))['total_quantity'] or 0
+            product_count = queryset.values('product').distinct().count()
+            print(total_sales, product_count)
+            if product_count > 0:
+                average_sales = total_sales // product_count  # Calculate average sales
+
+                # Get the product IDs based on the average sales
+                product_ids = queryset.values('product').annotate(total_quantity=Sum('quantity'))
+
+                if count_filter == 'many':
+                    # Filter products with total quantity sold greater than the average
+                    queryset = queryset.filter(product__in=product_ids.filter(total_quantity__gt=average_sales).values('product'))
+                elif count_filter == 'less':
+                    # Filter products with total quantity sold less than the average
+                    queryset = queryset.filter(product__in=product_ids.filter(total_quantity__lt=average_sales).values('product'))
+
+        return queryset
 
 
 class UserImageView(APIView):
