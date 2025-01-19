@@ -139,13 +139,17 @@ class ProductListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(name__icontains=name.strip('"')) # category bo'yicha filtr
         
 
-        if choice == 'rent' and price_from is not None and price_to is not None:
-            queryset = queryset.filter(rental_price__gte=price_from, rental_price__lte=price_to)  # Rental price filtering
-        elif choice == 'sell' and price_from is not None and price_to is not None:
-            queryset = queryset.filter(price__gte=price_from, price__lte=price_to)  # Price filtering
+        if choice == 'rent':
+            queryset = queryset.filter(choice="RENT")
+            if price_from is not None and price_to is not None:
+                queryset = queryset.filter(rental_price__gte=price_from, rental_price__lte=price_to)  # Rental price filtering
+        elif choice == 'sell':
+            queryset = queryset.filter(choice="SELL")
+            if price_from is not None and price_to is not None:
+                queryset = queryset.filter(price__gte=price_from, price__lte=price_to)  # Price filtering
         
         if choice == 'rent' and count_filter:
-            queryset = queryset.filter(choice="RENT")
+            # queryset = queryset.filter(choice="RENT")
             if count_filter in ['many', 'less']:
                 # Calculate total lend count for each product
                 # lend_counts = queryset.annotate(lend_count=Sum('lend_count'))  # Assuming 'lending' is the related name for the Lending model
@@ -163,7 +167,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
                         queryset = queryset.filter(lend_count__lt=average_lend_count)
                         
         elif choice == 'sell' and count_filter:
-            queryset = queryset.filter(choice="SELL")
+            # queryset = queryset.filter(choice="SELL")
             if count_filter in ['many', 'less']:
                 # Calculate total lend count for each product
                 total_lend_count = queryset.aggregate(
