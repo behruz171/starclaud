@@ -224,7 +224,7 @@ class Lending(BaseModel):
     )
     borrower_name = models.CharField(max_length=255)
     borrow_date = models.DateTimeField(auto_now_add=True)
-    return_date = models.DateField()
+    return_date = models.DateTimeField()
     actual_return_date = models.DateField(null=True, blank=True)
     AD = models.CharField(max_length=15)
     JSHSHR = models.CharField(max_length=15)
@@ -293,6 +293,7 @@ class Sale(BaseModel):
     quantity = models.PositiveIntegerField(null=True, blank=True)
     product_weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    reason_cancelled = models.CharField(max_length=200, null=True, blank=True)
 
     class Meta:
         ordering = ['-sale_date']

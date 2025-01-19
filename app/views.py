@@ -110,6 +110,11 @@ class ProductListCreateView(generics.ListCreateAPIView):
         # queryset = super().get_queryset()
         category = self.request.query_params.get('category', None)  # URL dan category parametrini olish
         name = self.request.query_params.get('name', None) # URL dan name param
+        choice = self.request.query_params.get('choice', None)  # URL dan choice parametrini olish
+        price_from = self.request.query_params.get('from', None)  # URL dan from parametrini olish
+        price_to = self.request.query_params.get('to', None)  # URL dan to parametrini olish
+        count_filter = self.request.query_params.get('count', None)  # URL dan count parametrini olish
+
 
 
         queryset = Product.objects.all()  # Barcha mahsulotlarni olish
@@ -132,8 +137,58 @@ class ProductListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(category__name=category)  # category bo'yicha filtr
         if name is not None:
             queryset = queryset.filter(name__icontains=name.strip('"')) # category bo'yicha filtr
+        
+
+        if choice == 'rent' and price_from is not None and price_to is not None:
+            queryset = queryset.filter(rental_price__gte=price_from, rental_price__lte=price_to)  # Rental price filtering
+        elif choice == 'sell' and price_from is not None and price_to is not None:
+            queryset = queryset.filter(price__gte=price_from, price__lte=price_to)  # Price filtering
+        
+        if choice == 'rent' and count_filter:
+            queryset = queryset.filter(choice="RENT")
+            if count_filter in ['many', 'less']:
+                # Calculate total lend count for each product
+                # lend_counts = queryset.annotate(lend_count=Sum('lend_count'))  # Assuming 'lending' is the related name for the Lending model
+                total_lend_count = queryset.aggregate(total=Sum('lend_count'))['total'] or 0  # Sum of lend_count
+                product_count = queryset.count()  # Total number of products
+
+                if product_count > 0:
+                    average_lend_count = total_lend_count // product_count  # Calculate average lend count
+                    print(average_lend_count)
+                    if count_filter == 'many':
+                        # Filter products with lend count greater than the average
+                        queryset = queryset.filter(lend_count__gt=average_lend_count)
+                    elif count_filter == 'less':
+                        # Filter products with lend count less than the average
+                        queryset = queryset.filter(lend_count__lt=average_lend_count)
+                        
+        elif choice == 'sell' and count_filter:
+            queryset = queryset.filter(choice="SELL")
+            if count_filter in ['many', 'less']:
+                # Calculate total lend count for each product
+                total_lend_count = queryset.aggregate(
+                    total_quantity=Coalesce(
+                        Sum('sales__quantity', output_field=DecimalField()),
+                        Sum('sales__product_weight'), output_field=DecimalField()
+                    ) 
+                )['total_quantity'] or 0  # Sum of lend_count
+                product_count = queryset.count()  # Total number of products
+
+                if product_count > 0:
+                    average_lend_count = total_lend_count // product_count  # Calculate average lend count
+                    if count_filter == 'many':
+                        queryset = queryset.filter(
+                            Q(sales__quantity__gt=average_lend_count) | 
+                            Q(sales__quantity__isnull=True, sales__product_weight__gt=average_lend_count)
+                        )
+                    elif count_filter == 'less':
+                        queryset = queryset.filter(
+                            Q(sales__quantity__lt=average_lend_count) | 
+                            Q(sales__quantity__isnull=True, sales__product_weight__lt=average_lend_count)
+                        )
 
         return queryset
+
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -223,9 +278,9 @@ class LendingViewSet(viewsets.ModelViewSet):
         
         queryset = Lending.objects.none()
         if user.role == User.ADMIN or user.role == User.SELLER:
-            queryset = Lending.objects.filter(product__admin=user.created_by, status=Lending.LENT)
+            queryset = Lending.objects.filter(product__admin=user.created_by, )
         elif user.role == User.DIRECTOR:
-            queryset = Lending.objects.filter(product__admin=user, status=Lending.LENT)
+            queryset = Lending.objects.filter(product__admin=user)
         # elif user.role == User.SELLER:
         #     return Lending.objects.filter(seller=user)
         if rental_price_from is not None and rental_price_to is not None:
@@ -236,7 +291,6 @@ class LendingViewSet(viewsets.ModelViewSet):
             # Calculate total lend count for each product
             total_lend_count = queryset.aggregate(total=Sum('product__lend_count'))['total'] or 0  # Sum of lend_count from Product
             product_count = queryset.values('product').distinct().count()
-            print(total_lend_count)
             if product_count > 0:
                 average_lend_count = total_lend_count // product_count  # Calculate average lend count
                 # print(total_lend_count, product_count)
@@ -540,6 +594,7 @@ class SaleViewSet(viewsets.ModelViewSet):
         # Get the 'from' and 'to' query parameters for sale_price
         sale_price_from = self.request.query_params.get('from', None)
         sale_price_to = self.request.query_params.get('to', None)
+        status = self.request.query_params.get('status', None)
 
         # Start with the base queryset
         queryset = Sale.objects.none()
@@ -552,7 +607,12 @@ class SaleViewSet(viewsets.ModelViewSet):
         # Apply sale price filtering if 'from' and 'to' are provided
         if sale_price_from is not None and sale_price_to is not None:
             queryset = queryset.filter(sale_price__gte=sale_price_from, sale_price__lte=sale_price_to)
-        
+        if status == "cancelled":
+            queryset = queryset.filter(status="CANCELLED")
+        elif status == "pending":
+            queryset = queryset.filter(status="PENDING")
+        elif status == "completed":
+            queryset = queryset.filter(status="COMPLETED")
         count_filter = self.request.query_params.get('count', None)
         if count_filter in ['many', 'less']:
             # Calculate total quantity sold and count of distinct products
@@ -752,7 +812,7 @@ class DailyStatisticsView(APIView):
         print(work_start, work_end)
         for hour in range(work_start, work_end+1, 1):  # Har 2 soatda
             uzbekistan_tz = pytz.timezone('Asia/Tashkent')
-            start_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            start_time = now.replace(hour=hour, minute=0, second=0, microsecond=9)
             end_time = start_time + timezone.timedelta(hours=1)
 
             # Sale daromadini hisoblash
@@ -771,10 +831,10 @@ class DailyStatisticsView(APIView):
             ).aggregate(
                 total_revenue=Sum('total_price')
             )['total_revenue'] or Decimal(0)
-
             # Lending daromadini hisoblash
             lending_revenue = Lending.objects.filter(
-                borrow_date__range=(start_time, end_time),
+                Q(status='RETURNED', return_date__range=(start_time, end_time)) | 
+                Q(status='LENT', borrow_date__range=(start_time, end_time)),
                 product__admin__in=[user] + list(user.created_users.all())
             ).annotate(
                 percentage_value=Cast(Replace(F('percentage'), Value('%'), Value('')), FloatField()),
