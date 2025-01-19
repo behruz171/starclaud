@@ -49,4 +49,8 @@ urlpatterns = [
     path('statistics/yearly/<int:year>/', views.YearlyDetailStatisticsView.as_view(), name='yearly-statistics'),
 
     path('videoqollanma/', views.VideoQollanmaListView.as_view(), name='videoqollanma-list'),
+
+    # Tariff lar uchun API lar
+    path('tariffs/', views.TariffCreateView.as_view(), name='tariff-create'),
+    path('tariff/', views.TariffRetrieveView.as_view(), name='tariff-retrieve'),
 ] 

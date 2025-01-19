@@ -198,7 +198,38 @@ class ProductListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         if user.role not in [User.ADMIN, User.DIRECTOR]:
             raise exceptions.PermissionDenied("Only Admin or Director can create products")
+        
+        if user.role == User.ADMIN:
+            director = user.created_by  # Adminning yaratuvchisi (Director)
+        else:
+            director = user
+        active_tariff = Tariff.objects.filter(user=director, status='active').first()
+
+        # Agar direktor tarifga ulanmagan bo'lsa
+        if not active_tariff:
+            raise exceptions.ValidationError("Director is not linked to any active tariff.")
+
+        # Agar tarifning statusi inactive bo'lsa
+        if active_tariff.status == 'inactive':
+            raise exceptions.ValidationError("The linked tariff is inactive.")
+
+        # Agar product yaratish vaqti tarifning from_date va to_date oralig'ida bo'lmasa
+        now = timezone.now()
+        if not (active_tariff.from_date <= now <= active_tariff.to_date):
+            raise exceptions.ValidationError("The product creation time is outside the active tariff period.")
+
+        # Director va u yaratgan userlarning umumiy productlar sonini hisoblash
+        total_products_count = Product.objects.filter(
+            admin=director
+        ).count() + Product.objects.filter(
+            admin__in=director.created_users.all()
+        ).count()
+
+        # Agar umumiy productlar soni tarifdagi product_count dan oshsa
+        if total_products_count >= active_tariff.product_count:
+            raise exceptions.ValidationError("Mahsulotlarning umumiy soni faol tarifda ruxsat etilgan chegaradan oshib ketadi. Agar yana mahsulot qo`shmoqchi bo`lsangiz yangi tarif sotib oling")
         serializer.save()
+
 
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
@@ -279,6 +310,7 @@ class LendingViewSet(viewsets.ModelViewSet):
         
         rental_price_from = self.request.query_params.get('from', None)
         rental_price_to = self.request.query_params.get('to', None)
+        status = self.request.query_params.get('status', None)
         
         queryset = Lending.objects.none()
         if user.role == User.ADMIN or user.role == User.SELLER:
@@ -287,6 +319,10 @@ class LendingViewSet(viewsets.ModelViewSet):
             queryset = Lending.objects.filter(product__admin=user)
         # elif user.role == User.SELLER:
         #     return Lending.objects.filter(seller=user)
+        if status == 'returned':
+            queryset = queryset.filter(status=Lending.RETURNED)
+        elif status == 'lent':
+            queryset = queryset.filter(status=Lending.LENT)
         if rental_price_from is not None and rental_price_to is not None:
             queryset = queryset.filter(product__rental_price__gte=rental_price_from, product__rental_price__lte=rental_price_to)
         
@@ -377,22 +413,59 @@ class SignUpView(generics.CreateAPIView):
         role = request.data.get('role', '').upper()
 
         if user.role == User.DIRECTOR:
+            director = user  # Adminning yaratuvchisi (Director)
+        else:
+            director = user.created_by
+        active_tariff = Tariff.objects.filter(user=director, status='active').first()
+
+        if not active_tariff:
+            return Response({
+                'status': 'error',
+                'message': "Direktor hech qanday faol tarifga bog'lanmagan."
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if active_tariff.status == 'inactive':
+            return Response({
+                'status': 'error',
+                'message': "Bog'langan tarif faol emas."
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        now = timezone.now()
+        if not (active_tariff.from_date <= now <= active_tariff.to_date):
+            return Response({
+                'status': 'error',
+                'message': 'Foydalanuvchini yaratish vaqti faol tarif davridan tashqarida.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.role == User.DIRECTOR:
             if role not in [User.ADMIN, User.SELLER]:
                 return Response({
                     'status': 'error',
-                    'message': 'Director can only create admins or sellers'
+                    'message': 'Direktor faqat administrator yoki sotuvchilar yaratishi mumkin'
                 }, status=status.HTTP_400_BAD_REQUEST)
         elif user.role == User.ADMIN:
             if role != User.SELLER:
                 return Response({
                     'status': 'error',
-                    'message': 'Admin can only create sellers'
+                    'message': 'Administrator faqat sotuvchilarni yaratishi mumkin'
                 }, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({
-                'status': 'error',
-                'message': 'You do not have permission to create users'
-            }, status=status.HTTP_403_FORBIDDEN)
+        
+        if role == User.SELLER:
+            current_seller_count = User.objects.filter(created_by=director, role=User.SELLER).count()
+            if current_seller_count >= active_tariff.seller_count:
+                return Response({
+                    'status': 'error',
+                    'message': 'Sotuvchilar soni faol tarifdagi chegaradan oshib ketgan.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if role == User.ADMIN:
+            current_admin_count = User.objects.filter(created_by=director, role=User.ADMIN).count()
+            if current_admin_count >= active_tariff.admin_count:
+                return Response({
+                    'status': 'error',
+                    'message': 'Adminlar soni faol tarifdagi limitdan oshib ketdi'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
 
         # Update request data with uppercase role
         request.data['role'] = role
@@ -1837,3 +1910,36 @@ class VideoQollanmaListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         return VideoQollanma.objects.filter(role=user.role)
+
+
+class TariffCreateView(generics.CreateAPIView):
+    serializer_class = TariffSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role == User.DIRECTOR:  # Faqat direktorlar uchun
+            # Tariff yaratishdan oldin cheklovlarni tekshirish
+            if serializer.validated_data['admin_count'] < 10:  # Masalan, 10 dan oshmasligi kerak
+                raise serializers.ValidationError("Admin soni 10 dan kam bolmasligi kerak.")
+            if serializer.validated_data['seller_count'] < 10:  # Masalan, 10 dan oshmasligi kerak
+                raise serializers.ValidationError("Seller soni 10 dan kam bolmasligi kerak.")
+            if serializer.validated_data['product_count'] < 100:  # Masalan, 100 dan oshmasligi kerak
+                raise serializers.ValidationError("Product soni 100 dan kam bolmasligi kerak.")
+            serializer.save(user=user)  # Directorni saqlash
+        else:
+            raise permissions.PermissionDenied("Faqat direktorlar tarif yaratishi mumkin.")
+
+
+
+class TariffRetrieveView(generics.RetrieveAPIView):
+    serializer_class = TariffDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        user = self.request.user
+        # Faqat direktorlar uchun aktiv tarifni olish
+        tariff = Tariff.objects.filter(user=user, status='active').first()
+        if not tariff:
+            raise exceptions.NotFound("No active tariff found for this director.")
+        return tariff

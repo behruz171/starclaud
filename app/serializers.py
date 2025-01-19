@@ -23,7 +23,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'role', 'img', 'age', 'gender', 
-                  'work_start_time', 'work_end_time', 'AD', 'JSHSHR', 
+                  'work_start_time', 'work_end_time', 'phone', 'AD', 'JSHSHR', 
                   'city', 'district', 'neighborhood', 'street', 
                   'salary', 'KPI', 'is_convicted','is_married',]
         read_only_fields = fields
@@ -398,7 +398,7 @@ class SaleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sale
-        fields = ['id',"product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status", 'product_weight']
+        fields = ['id',"product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status", 'product_weight', 'reason_cancelled']
     
     id = serializers.IntegerField(read_only=True)
 
@@ -463,3 +463,30 @@ class VideoQollanmaSerializer(serializers.ModelSerializer):
     class Meta:
         model = VideoQollanma
         fields = ['id', 'title', 'youtube_link', 'youtube_link_img', 'img', 'role']
+
+
+class TariffSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tariff
+        fields = ['name', 'director_count', 'admin_count', 'seller_count', 'product_count', 'from_date', 'to_date', 'price', 'status']
+
+
+class TariffDetailSerializer(serializers.ModelSerializer):
+    seller_count_now = serializers.SerializerMethodField()
+    admin_count_now = serializers.SerializerMethodField()
+    product_count_now = serializers.SerializerMethodField()
+    class Meta:
+        model = Tariff
+        fields = ['id', 'name', 'director_count', 'admin_count', 'seller_count', 'product_count', 'from_date', 'to_date', 'price', 'status', 'admin_count_now', 'seller_count_now', 'product_count_now']
+    
+    def get_seller_count_now(self, obj):
+        # Director tomonidan yaratilgan sellerlar sonini hisoblash
+        return User.objects.filter(created_by=obj.user, role=User.SELLER).count()
+
+    def get_admin_count_now(self, obj):
+        # Director tomonidan yaratilgan adminlar sonini hisoblash
+        return User.objects.filter(created_by=obj.user, role=User.ADMIN).count()
+
+    def get_product_count_now(self, obj):
+        # Director tomonidan yaratilgan mahsulotlar sonini hisoblash
+        return Product.objects.filter(admin=obj.user).count()

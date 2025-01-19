@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.utils.html import format_html
 from .models import *
 from django.db.models import Q
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username','first_name', 'last_name', 'email', 'role', 'created_by', 'is_active', 'age', 'gender', 'salary')
+    list_display = ('username', 'show_img','first_name', 'last_name', 'email', 'role', 'created_by', 'is_active', 'age', 'gender', 'salary')
     list_filter = ('role', 'is_active')
     search_fields = ('username', 'email')
     
@@ -13,10 +14,12 @@ class CustomUserAdmin(UserAdmin):
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {
             'fields': (
+                'img_preview',
                 'img',
                 'first_name', 
                 'last_name', 
                 'email',
+                'phone',
                 'role',
                 'age',
                 'gender',
@@ -45,6 +48,7 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
 
+    readonly_fields = ['img_preview'] 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
@@ -67,6 +71,20 @@ class CustomUserAdmin(UserAdmin):
             elif request.user.role == User.ADMIN:
                 return qs.filter(Q(created_by=request.user) | Q(pk=request.user.pk))
         return qs
+    
+    def show_img(self, obj):
+        if obj.img:  # `img` maydoningiz modeli ichida mavjud bo‘lishi kerak
+            return format_html('<img src="{}" style="width: 35px; height: 35px; border-radius: 50%;" />', obj.img.url)
+        return "No Image"
+    show_img.short_description = "Profile Image"
+
+    def img_preview(self, obj):
+        if obj.img:  # `img` maydoningiz modeli ichida mavjud bo‘lishi kerak
+            return format_html('<img src="{}" style="width: 90px; height: 90px; border: 2px solid black; border-radius: 5px;" />', obj.img.url)
+        return "No Image"
+    show_img.short_description = "Profile Image"
+    
+    
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -110,3 +128,4 @@ class VideoQollanmaAdmin(admin.ModelAdmin):
     search_fields = ('title',)  # Qidirish maydoni
 
 admin.site.register(VideoQollanma, VideoQollanmaAdmin)
+admin.site.register(Tariff)

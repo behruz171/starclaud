@@ -58,6 +58,7 @@ class User(AbstractUser):
     work_start_time = models.TimeField(max_length=20, default=now)
     work_end_time = models.TimeField(max_length=20, default=now)
     AD = models.CharField(max_length=15)
+    phone = models.CharField(max_length=15, blank=True, null=True)
     JSHSHR = models.CharField(max_length=15)
     city = models.CharField(max_length=100, blank=True, null=True)
     district = models.CharField(max_length=100, blank=True, null=True)
@@ -353,3 +354,34 @@ class VideoQollanma(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Tariff(BaseModel):
+    STATUS_CHOICES = [
+        ('active', 'Ishlayapti'),
+        ('inactive', 'Ishlamayapti'),
+    ]
+
+    name = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Director
+    director_count = models.PositiveIntegerField(default=0)
+    admin_count = models.PositiveIntegerField(default=0)
+    seller_count = models.PositiveIntegerField(default=0)
+    product_count = models.PositiveIntegerField(default=0)
+    from_date = models.DateTimeField()
+    to_date = models.DateTimeField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+
+    def save(self, *args, **kwargs):
+        # Agar bu yangi tarif bo'lsa, avvalgi tarifni inactive holatiga o'tkazish
+        if self.pk is None:  # Yangi ob'ekt
+            previous_tariff = Tariff.objects.filter(user=self.user, status='active').first()
+            if previous_tariff:
+                previous_tariff.status = 'inactive'
+                previous_tariff.save()  # Eski tarifni saqlash
+
+        super().save(*args, **kwargs) 
+
+    def __str__(self):
+        return self.name
