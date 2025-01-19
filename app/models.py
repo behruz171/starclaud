@@ -329,14 +329,40 @@ class Sale(BaseModel):
         if self.product.admin != self.seller.created_by and self.product.admin != self.seller:
             raise ValidationError("Sotuvchi mahsulotning admini bilan bir xil 'created_by' ga ega bo'lishi kerak.")
         # Agar hammasi to'g'ri bo'lsa, saqlash
-        super().save(*args, **kwargs)
 
         # Sotilgandan so'ng, mahsulotning miqdorini yangilash
-        if self.quantity:
-            self.product.quantity -= self.quantity
-        elif self.product_weight:
-            self.product.weight -= Decimal(self.product_weight)
+        if self.pk:
+            old_instance = Sale.objects.get(pk=self.pk)
+            old_quantity = old_instance.quantity or 0
+            old_weight = old_instance.product_weight or 0
+        else:
+            old_quantity = 0
+            old_weight = 0
+        
+        if not self.pk:  # Yangi ob'ekt
+            if self.quantity:
+                self.product.quantity -= self.quantity
+            elif self.product_weight:
+                self.product.weight -= Decimal(self.product_weight)
+        else:  # Yangilanish
+            if self.status == 'CANCELLED' and old_instance.status != 'CANCELLED':
+                # Cancel qilinganda, eski qiymatni qaytarish
+                if old_quantity:
+                    self.product.quantity += old_quantity
+                if old_weight:
+                    self.product.weight += Decimal(old_weight)
+            elif self.status != 'CANCELLED' and old_instance.status == 'CANCELLED':
+                # Cancel'dan qayta sotilishga o'tgan bo'lsa
+                if self.quantity:
+                    self.product.quantity -= self.quantity
+                elif self.product_weight:
+                    self.product.weight -= Decimal(self.product_weight)
+
+        # Mahsulotni saqlash
         self.product.save()
+        super().save(*args, **kwargs)
+
+    
 
 
 class VideoQollanma(models.Model):
