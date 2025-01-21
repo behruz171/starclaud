@@ -394,6 +394,7 @@ class Tariff(BaseModel):
     admin_count = models.PositiveIntegerField(default=0)
     seller_count = models.PositiveIntegerField(default=0)
     product_count = models.PositiveIntegerField(default=0)
+    category_count = models.PositiveIntegerField(default=0)
     from_date = models.DateTimeField()
     to_date = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2)

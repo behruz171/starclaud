@@ -411,6 +411,9 @@ class SignUpView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         user = request.user
         role = request.data.get('role', '').upper()
+        username = request.data.get('username', None)
+        if User.objects.filter(username=username).exists():
+            raise exceptions.ValidationError("Username already exists.", code=status.HTTP_401_UNAUTHORIZED)
 
         if user.role == User.DIRECTOR:
             director = user  # Adminning yaratuvchisi (Director)
@@ -519,6 +522,31 @@ class CategoryListCreateView(generics.ListCreateAPIView):
         return Response({"results": serializer.data}, status=status.HTTP_200_OK)
 
     def perform_create(self, serializer):
+        user = self.request.user
+        if user.role == User.ADMIN:
+            director = user.created_by  # Adminning yaratuvchisi (Director)
+        else:
+            director = user
+        active_tariff = Tariff.objects.filter(user=director, status='active').first()
+
+        # Agar direktor tarifga ulanmagan bo'lsa
+        if not active_tariff:
+            raise exceptions.ValidationError("Director is not linked to any active tariff.")
+
+        # Agar tarifning statusi inactive bo'lsa
+        if active_tariff.status == 'inactive':
+            raise exceptions.ValidationError("The linked tariff is inactive.")
+
+        # Agar product yaratish vaqti tarifning from_date va to_date oralig'ida bo'lmasa
+        now = timezone.now()
+        if not (active_tariff.from_date <= now <= active_tariff.to_date):
+            raise exceptions.ValidationError("The category creation time is outside the active tariff period.")
+        
+        current_category_count = Category.objects.filter(created_by=director).count()
+
+        if current_category_count >= active_tariff.category_count:
+            raise exceptions.ValidationError("Kategoriyalar soni faol tarifdagi chegaradan oshib ketadi")
+        
         serializer.save()
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -895,7 +923,9 @@ class DailyStatisticsView(APIView):
             # Sale daromadini hisoblash
             sale_revenue = Sale.objects.filter(
                 sale_date__range=(start_time, end_time),
-                product__admin=user
+                product__admin=user,
+            ).exclude(
+                status='CANCELLED'
             ).annotate(
                 total_price=ExpressionWrapper(
                     Case(
@@ -968,6 +998,8 @@ class DailyStatisticsView(APIView):
         top_products = Sale.objects.filter(
             product__admin=user,
             sale_date__range=(start, end)
+        ).exclude(
+            status='CANCELLED'
         ).values(
             'product__id',
             'product__name',
@@ -1003,7 +1035,9 @@ class DailyStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
+        ).order_by('total_quantity').exclude(
+                status='CANCELLED'
+        ).distinct()[:10]  # O'sish tartibida
 
         return {
             'statistic': dict(daily_revenue),
@@ -1063,6 +1097,8 @@ class WeeklyStatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__date=day,
                 product__admin=user
+            ).exclude(
+                status='CANCELLED'
             ).annotate(total_price=ExpressionWrapper(
                     Case(
                         When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
@@ -1136,6 +1172,8 @@ class WeeklyStatisticsView(APIView):
         top_products = Sale.objects.filter(
             product__admin=user,
             sale_date__range=(start_of_week, end_of_week)
+        ).exclude(
+            status='CANCELLED'
         ).values(
             'product__id',
             'product__name',
@@ -1171,7 +1209,9 @@ class WeeklyStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
+        ).order_by('total_quantity').exclude(
+                status='CANCELLED'
+        ).distinct()[:10]  # O'sish tartibida
 
 
         return {
@@ -1239,6 +1279,8 @@ class MonthlyStatisticsView(APIView):
             sale_revenue = Sale.objects.filter(
                 sale_date__date=date,
                 product__admin=user
+            ).exclude(
+                status='CANCELLED'
             ).annotate(total_price=ExpressionWrapper(
                     Case(
                         When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
@@ -1314,6 +1356,8 @@ class MonthlyStatisticsView(APIView):
         top_products = Sale.objects.filter(
             product__admin=user,
             sale_date__range=(start_of_month, end_of_month)
+        ).exclude(
+            status='CANCELLED'
         ).values(
             'product__id',
             'product__name',
@@ -1349,7 +1393,9 @@ class MonthlyStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
+        ).order_by('total_quantity').exclude(
+                status='CANCELLED'
+        ).distinct()[:10]  # O'sish tartibida
 
 
         return {
@@ -1450,6 +1496,8 @@ class YearlyDetailStatisticsView(APIView):
                 sale_date__year=year,
                 sale_date__month=month,
                 product__admin=user
+            ).exclude(
+                status='CANCELLED'
             ).annotate(total_price=ExpressionWrapper(
                     Case(
                         When(product_weight__isnull=False, then=F('product_weight') * F('sale_price')),
@@ -1525,6 +1573,8 @@ class YearlyDetailStatisticsView(APIView):
         top_products = Sale.objects.filter(
             product__admin=user,
             sale_date__range=(start_of_year, end_of_year)
+        ).exclude(
+            status='CANCELLED'
         ).values(
             'product__id',
             'product__name',
@@ -1560,7 +1610,9 @@ class YearlyDetailStatisticsView(APIView):
                 )
             ),
             total_sales=Count('id')
-        ).order_by('total_quantity').distinct()[:10]  # O'sish tartibida
+        ).order_by('total_quantity').exclude(
+            status='CANCELLED'
+        ).distinct()[:10]  # O'sish tartibida
 
 
         return {
@@ -1575,7 +1627,7 @@ class YearlyDetailStatisticsView(APIView):
                     'id': product['product__id'],
                     'name': product['product__name'],
                     'price': product['product__price'],
-                    'total_sales': product['total_sales']
+                    'total_sales': product['total_sales'],
                 } 
                 for product in top_products
             ],
@@ -1584,7 +1636,7 @@ class YearlyDetailStatisticsView(APIView):
                     'id': product['product__id'],
                     'name': product['product__name'],
                     'price': product['product__price'],
-                    'total_sales': product['total_sales']
+                    'total_sales': product['total_sales'],
                 } 
                 for product in bottom_products
             ]
@@ -1797,7 +1849,12 @@ class UserMonthlyIncomeView(APIView):
             sale_date__range=(start_date, end_date)
         ).annotate(
             kpi_value=ExpressionWrapper(
-                F('sale_price') * F('quantity') * user.KPI / 100,
+                Case(
+                    When(quantity__isnull=False, then=F('sale_price') * F('quantity') * user.KPI / 100),  # Agar quantity mavjud bo'lsa
+                    When(product_weight__isnull=False, then=F('sale_price') * F('product_weight') * user.KPI / 100),  # Agar quantity mavjud bo'lmasa, product_weight ni olish
+                    default=0,  # Agar ikkalasi ham bo'lmasa, 0
+                    output_field=DecimalField()
+                ),
                 output_field=DecimalField()
             )
         ).aggregate(total_kpi=Sum('kpi_value'))['total_kpi'] or Decimal(0)
