@@ -67,15 +67,15 @@ class User(AbstractUser):
     salary = models.DecimalField(max_digits=12, decimal_places=2, null=False, default=0.00)
     KPI = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     is_convicted = models.CharField(
-        max_length=3,
-        choices=CONVICTED_CHOICES,
+        max_length=10,
+        # choices=CONVICTED_CHOICES,
         null=True,
         blank=True  # Dastlabki qiymati "Yoq"
     )  # Sudlanganmi
 
     is_married = models.CharField(
-        max_length=3,
-        choices=MARRIED_CHOICES,
+        max_length=10,
+        # choices=MARRIED_CHOICES,
         null=True,
         blank=True # Dastlabki qiymati "Yoq"
     )  # Oilalik

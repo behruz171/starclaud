@@ -35,7 +35,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'password', 'role','first_name', 'last_name', 'img', 'age', 'gender', 
-                  'work_start_time', 'work_end_time', 'AD', 'JSHSHR', 
+                  'work_start_time', 'work_end_time', 'phone', 'AD', 'JSHSHR', 
                   'city', 'district', 'neighborhood', 'street', 
                   'salary', 'KPI', 'created_users']
         extra_kwargs = {
@@ -111,6 +111,7 @@ class UserSerializer(serializers.ModelSerializer):
             gender=validated_data.get('gender', ''),
             work_start_time=validated_data.get('work_start_time', ''),
             work_end_time=validated_data.get('work_end_time', ''),
+            phone=validated_data.get('phone', ''),
             age=validated_data.get('age', 0),
             AD=validated_data.get('AD',''),
             JSHSHR=validated_data.get('JSHSHR', ''),
@@ -468,7 +469,7 @@ class VideoQollanmaSerializer(serializers.ModelSerializer):
 class TariffSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tariff
-        fields = ['name', 'director_count', 'admin_count', 'seller_count', 'product_count', 'from_date', 'to_date', 'price', 'status']
+        fields = ['name', 'director_count', 'admin_count', 'seller_count', 'product_count','category_count', 'from_date', 'to_date', 'price', 'status']
 
 
 class TariffDetailSerializer(serializers.ModelSerializer):
@@ -477,7 +478,7 @@ class TariffDetailSerializer(serializers.ModelSerializer):
     product_count_now = serializers.SerializerMethodField()
     class Meta:
         model = Tariff
-        fields = ['id', 'name', 'director_count', 'admin_count', 'seller_count', 'product_count', 'from_date', 'to_date', 'price', 'status', 'admin_count_now', 'seller_count_now', 'product_count_now']
+        fields = ['id', 'name', 'director_count', 'admin_count', 'seller_count', 'product_count', 'category_count', 'from_date', 'to_date', 'price', 'status', 'admin_count_now', 'seller_count_now', 'product_count_now']
     
     def get_seller_count_now(self, obj):
         # Director tomonidan yaratilgan sellerlar sonini hisoblash

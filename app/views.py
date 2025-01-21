@@ -413,7 +413,11 @@ class SignUpView(generics.CreateAPIView):
         role = request.data.get('role', '').upper()
         username = request.data.get('username', None)
         if User.objects.filter(username=username).exists():
-            raise exceptions.ValidationError("Username already exists.", code=status.HTTP_401_UNAUTHORIZED)
+            return Response({
+                'status':"error",
+                'message':"username already exists"
+                },
+                status=status.HTTP_401_UNAUTHORIZED)
 
         if user.role == User.DIRECTOR:
             director = user  # Adminning yaratuvchisi (Director)
