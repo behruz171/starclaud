@@ -37,7 +37,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'password', 'role','first_name', 'last_name', 'img', 'age', 'gender', 
                   'work_start_time', 'work_end_time', 'phone', 'AD', 'JSHSHR', 
                   'city', 'district', 'neighborhood', 'street', 
-                  'salary', 'KPI', 'created_users']
+                  'salary', 'KPI', 'created_users', 'is_convicted', 'is_married']
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -121,6 +121,8 @@ class UserSerializer(serializers.ModelSerializer):
             street=validated_data.get('street', ''),
             salary=validated_data.get('salary',0),
             KPI=validated_data.get("KPI", 0),
+            is_married=validated_data.get('is_married', ''),
+            is_convicted=validated_data.get('is_convicted', ''),
 
             created_by=created_by  # Set the creator as the director
         )
