@@ -476,9 +476,10 @@ class TariffDetailSerializer(serializers.ModelSerializer):
     seller_count_now = serializers.SerializerMethodField()
     admin_count_now = serializers.SerializerMethodField()
     product_count_now = serializers.SerializerMethodField()
+    category_count_now = serializers.SerializerMethodField()
     class Meta:
         model = Tariff
-        fields = ['id', 'name', 'director_count', 'admin_count', 'seller_count', 'product_count', 'category_count', 'from_date', 'to_date', 'price', 'status', 'admin_count_now', 'seller_count_now', 'product_count_now']
+        fields = ['id', 'name', 'director_count', 'admin_count', 'seller_count', 'product_count', 'category_count', 'from_date', 'to_date', 'price', 'status', 'admin_count_now', 'seller_count_now', 'product_count_now', 'category_count_now']
     
     def get_seller_count_now(self, obj):
         # Director tomonidan yaratilgan sellerlar sonini hisoblash
@@ -491,3 +492,5 @@ class TariffDetailSerializer(serializers.ModelSerializer):
     def get_product_count_now(self, obj):
         # Director tomonidan yaratilgan mahsulotlar sonini hisoblash
         return Product.objects.filter(admin=obj.user).count()
+    def get_category_count_now(self, obj):
+        return Category.objects.filter(created_by=obj.user).count()
