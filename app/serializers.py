@@ -129,6 +129,7 @@ class UserSerializer(serializers.ModelSerializer):
         return new_user
 
 
+
 class UserManagementSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
