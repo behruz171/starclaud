@@ -391,7 +391,7 @@ class SaleProductDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'category', 'img', 'rental_price', 'status']  # 'category' ni qo'shing # Agar category bo'lmasa, None qaytaring
+        fields = ['id', 'name', 'category', 'img', 'price', 'status']  # 'category' ni qo'shing # Agar category bo'lmasa, None qaytaring
 
 class SaleSerializer(serializers.ModelSerializer):
     product_detail = SaleProductDetailSerializer(source='product', read_only=True)
