@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import make_password
@@ -19,6 +20,13 @@ from decimal import Decimal
 import pytz
 import calendar
 from datetime import datetime
+
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
 
 class LoginView(TokenObtainPairView):
     permission_classes = []
@@ -53,6 +61,36 @@ class LoginView(TokenObtainPairView):
             'status': 'error',
             'message': 'Invalid credentials'
         }, status=status.HTTP_401_UNAUTHORIZED)
+
+class LoginAsUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Foydalanuvchi username va parolni olamiz
+        username = request.data.get('username')
+        superuser_password = request.data.get('password')
+
+        # Superuserni tekshirish
+        if not request.user.is_superuser:
+            raise PermissionDenied("Only superusers can perform this action.")
+
+        # Superuserni autentifikatsiya qilish
+        superuser = authenticate(username=request.user.username, password=superuser_password)
+        if not superuser:
+            raise ValidationError("Superuser credentials are invalid.")
+
+        # Foydalanuvchini topamiz
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Foydalanuvchi uchun token yaratamiz
+        tokens = get_tokens_for_user(user)
+        return Response({
+            'message': f"You have successfully logged in as {username}.",
+            'tokens': tokens,
+        })
 
 class DashboardView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]

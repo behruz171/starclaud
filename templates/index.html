@@ -1,10 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <title>StarClaud</title>
+
     <style>
+        /* Scrollning umumiy kengligi */
+        ::-webkit-scrollbar {
+            width: 12px;
+            /* Kenglik */
+            height: 12px;
+            /* Gorizontal scroll uchun balandlik */
+        }
+
+        /* Scroll track (asos) */
+        ::-webkit-scrollbar-track {
+            background: linear-gradient(45deg, #f3f4f6, #e5e7eb);
+            /* Gradient fon */
+            border-radius: 10px;
+            /* Yumaloq burchaklar */
+            border: 1px solid #d1d5db;
+            /* Track chegara */
+        }
+
+        /* Scroll harakatlanuvchi qismi (thumb) */
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #00ccff, #ffcb00);
+            /* Gradient rang */
+            border-radius: 10px;
+            /* Thumbning yumaloqligi */
+            border: 2px solid #f3f4f6;
+            /* Thumb chegarasi */
+        }
+
+        /* Hover effekti */
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to right, #00ccff, #ffcb00);
+            /* Hoverda quyuq ranglar */
+        }
+
+        /* Scrollning burchak qismi */
+        ::-webkit-scrollbar-corner {
+            background: #e5e7eb;
+            /* Gorizontal va vertikal scroll tutashgan joy rangi */
+        }
+
         /* General Styling */
         * {
             margin: 0;
@@ -25,7 +68,7 @@
             width: 100%;
             background: linear-gradient(to right, #00ccff, #ffcb00);
             color: #fff;
-            padding: 15px 50px;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -51,62 +94,124 @@
             color: #ffa500;
         }
 
-        section {
-            padding: 100px 50px;
-            text-align: center;
+        .desktop-nav {
+            display: flex;
+        }
+
+        .desktop-lang-switcher select {
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Hamburger menyu (mobil uchun) */
+        .hamburger-menu {
+            display: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1001;
+            justify-content: flex-end;
+        }
+
+        .mobile-menu {
+            background: #fff;
+            width: 250px;
+            height: 100vh;
             overflow: hidden;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-nav a {
+            margin: 120px 50px;
+            font-size: 18px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .mobile-nav a:hover {
+            color: #00ccff;
+        }
+
+        .close-menu {
+            background: none;
+            border: none;
+            font-size: 24px;
+            align-self: flex-end;
+            cursor: pointer;
+        }
+
+        .mobile-lang-switcher select {
+            margin: 20px 0;
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            width: 100%;
+            outline: none;
+            cursor: pointer;
         }
 
         /* Home Section */
         #home {
             height: 100vh;
-            background: linear-gradient(to bottom right, #00ccff, #ffcb00);
+            background: linear-gradient(to right, #00ccff, #ffcb00);
             color: #fff;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            padding: 0 20px;
+            /* Extra padding for responsiveness */
+            text-align: center;
             animation: fadeIn 2s ease-in-out;
         }
 
         #home h1 {
-            font-size: 50px;
+            font-size: 3rem;
+            /* Base font size */
             margin-bottom: 20px;
+            font-weight: 700;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         #home p {
-            font-size: 20px;
+            font-size: 1.2rem;
+            /* Base font size */
             max-width: 600px;
             line-height: 1.8;
-        }
-
-        #home .btn {
-            margin-top: 30px;
-            padding: 15px 30px;
-            font-size: 16px;
-            color: #fff;
-            background: #ffa500;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background 0.3s ease, transform 0.3s ease;
-        }
-
-        #home .btn:hover {
-            background: #ffcb00;
-            transform: scale(1.1);
+            text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.2);
         }
 
         /* Features Section */
         #features {
-            background: #f7f7f7;
+            padding: 100px 20px;
+            background: linear-gradient(to bottom, #f0f9ff, #e0f7ff);
             color: #333;
+            text-align: center;
         }
 
         #features h2 {
             font-size: 36px;
-            margin-bottom: 20px;
-            animation: slideDown 1s ease-in-out;
+            font-weight: bold;
+            color: #0077cc;
+            margin-bottom: 40px;
+            animation: fadeIn 1.5s ease-in-out;
         }
 
         .features-container {
@@ -117,93 +222,277 @@
             margin-top: 30px;
         }
 
+        /* Kartalar dizayni */
         .feature-box {
             background: #fff;
-            border: 2px solid #00ccff;
-            border-radius: 10px;
+            border: 2px solid #0077cc;
+            border-radius: 15px;
             padding: 20px;
-            max-width: 300px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
+            width: 100%;
+            max-width: 320px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .feature-box:hover {
             transform: translateY(-10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
         }
 
         .feature-box h3 {
-            font-size: 24px;
-            color: #00ccff;
+            font-size: 22px;
+            color: #0077cc;
             margin-bottom: 10px;
+            text-transform: uppercase;
         }
 
         .feature-box p {
             font-size: 16px;
-            line-height: 1.5;
+            line-height: 1.6;
+            color: #555;
         }
 
+
         /* About Section */
+        /* Biz haqimizda */
         #about {
-            background: linear-gradient(to bottom right, #ffa500, #ffcb00);
+            padding: 100px 20px;
+            background: linear-gradient(to right, #00ccff, #ffcb00);
             color: #fff;
+            text-align: center;
         }
 
         #about h2 {
             font-size: 36px;
-            margin-bottom: 20px;
+            margin-bottom: 40px;
             animation: fadeIn 1s ease-in-out;
         }
 
-        #about p {
+        .about-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .about-card {
+            background: #fff;
+            border-radius: 15px;
+            color: #333;
+            max-width: 300px;
+            padding: 20px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+        }
+
+
+        .about-card h4 {
             font-size: 18px;
-            line-height: 1.8;
-            max-width: 800px;
-            margin: 20px auto;
-            animation: fadeIn 2s ease-in-out;
+            color: #0077cc;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .about-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .about-img {
+            width: 180px;
+            height: 180px;
+            border-radius: 25%;
+            margin-bottom: 15px;
+        }
+
+        .about-role {
+            font-size: 15px;
+            color: #00ccff;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .about-desc {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .social-links a {
+            margin: 0 10px;
+            color: #0077cc;
+            font-size: 20px;
+            transition: color 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: #005fa3;
         }
 
         /* Contact Section */
+        /* Kontakt bo'limining umumiy sozlamalari */
         #contact {
-            background: #fff;
+            background: linear-gradient(to right, #00ccff, #ffcb00);
+            padding: 50px 20px;
+            /* Mobilga moslashish uchun ichki bo‘shliq moslashtirildi */
+            text-align: center;
         }
 
         #contact h2 {
-            font-size: 36px;
-            color: #ffa500;
+            font-size: 28px;
+            /* Mobil uchun kichikroq font */
+            color: #fff;
+            margin-bottom: 20px;
             animation: slideDown 1s ease-in-out;
         }
 
+        #contact p {
+            color: #fff;
+            font-size: 16px;
+            /* Mobil uchun kichikroq font */
+            line-height: 1.6;
+            max-width: 100%;
+            /* Ekranga moslashuv */
+            margin: 10px auto 20px;
+            animation: fadeIn 2s ease-in-out;
+        }
+
+        /* Form sozlamalari */
         form {
             max-width: 600px;
             margin: 0 auto;
-            margin-top: 20px;
+            /* Telefon ekrani uchun to‘liq kenglikda */
             background: #f7f7f7;
-            padding: 20px;
+            padding: 15px;
+            /* Kichik ekranlar uchun moslashuvchan ichki bo‘shliq */
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             animation: fadeIn 2s ease-in-out;
         }
 
-        form input, form textarea, form button {
+        /* Input va textarea uslublari */
+        form input,
+        form textarea {
             width: 100%;
             margin-bottom: 15px;
-            padding: 10px;
+            padding: 12px 15px;
             border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            /* Mobil uchun mos */
+            transition: border-color 0.3s ease;
         }
 
+        form input:focus,
+        form textarea:focus {
+            border-color: #00ccff;
+            box-shadow: 0 0 5px rgba(0, 204, 255, 0.5);
+            outline: none;
+        }
+
+        /* Submit tugmasi */
         form button {
-            background: #00ccff;
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 16px;
+            font-weight: bold;
             color: #fff;
+            background: #00ccff;
             border: none;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, transform 0.2s ease;
         }
 
         form button:hover {
-            background: #ffa500;
+            background: #ffcb00;
         }
+
+        form button:active {
+            transform: scale(0.98);
+        }
+
+        /* Animatsiyalar */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+
+
+        /* Tarif style */
+        .tariff-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 20px;
+        }
+
+        .tariff {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .tariff h3 {
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+
+        .tariff select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+
+        .tariff ul {
+            list-style: none;
+            margin: 10px 0;
+        }
+
+        .tariff ul li {
+            margin: 5px 0;
+        }
+
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            margin: 15px 0;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
 
         /* Animations */
         @keyframes fadeIn {
@@ -211,6 +500,7 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             100% {
                 opacity: 1;
                 transform: translateY(0);
@@ -222,63 +512,511 @@
                 transform: translateY(-50px);
                 opacity: 0;
             }
+
             100% {
                 transform: translateY(0);
                 opacity: 1;
             }
         }
+
+        /* Media Queries */
+        @media screen and (max-width: 768px) {
+
+            .desktop-nav,
+            .desktop-lang-switcher {
+                display: none;
+            }
+
+            .hamburger-menu {
+                display: block;
+            }
+
+            .mobile-menu-overlay {
+                display: flex;
+            }
+
+            #home {
+                padding: 20px;
+                /* Extra padding for smaller screens */
+            }
+
+            #home h1 {
+                font-size: 2rem;
+                /* Adjusted for phones */
+            }
+
+            #home p {
+                font-size: 0.9rem;
+                /* Adjusted for phones */
+                line-height: 1.6;
+            }
+
+            #contact {
+                padding: 30px 15px;
+                /* Telefon uchun bo‘shliqni qisqartirish */
+            }
+
+            #contact h2 {
+                font-size: 24px;
+            }
+
+            #contact p {
+                font-size: 14px;
+            }
+
+            #features h2 {
+                font-size: 28px;
+            }
+
+            .features-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .feature-box {
+                max-width: 90%;
+            }
+
+            #about h2 {
+                font-size: 28px;
+            }
+
+            .about-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .about-card {
+                max-width: 90%;
+            }
+
+            form {
+                width: 100%;
+                padding: 15px;
+                /* Telefon uchun ichki bo‘shliq moslashtirildi */
+            }
+
+            form input,
+            form textarea {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            form button {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+
+        }
     </style>
 </head>
+
 <body>
-
-<header>
-    <h1>StarClaud</h1>
-    <nav>
-        <a href="#home">Home</a>
-        <a href="#features">Features</a>
-        <a href="#about">About</a>
-        <a href="#contact">Contact</a>
-    </nav>
-</header>
-
-<section id="home">
-    <h1>Welcome to StarClaud</h1>
-    <p>Your ultimate solution for cloud storage and file management.</p>
-    <a href="#features" class="btn">Explore Features</a>
-</section>
-
-<section id="features">
-    <h2>Our Features</h2>
-    <div class="features-container">
-        <div class="feature-box">
-            <h3>Secure Storage</h3>
-            <p>Protect your files with our industry-leading encryption technology.</p>
+    <header>
+        <h1 id="title">StarClaud</h1>
+        <nav class="desktop-nav">
+            <a href="#home" id="nav-home">Bosh sahifa</a>
+            <a href="#features" id="nav-features">Xususiyatlar</a>
+            <a href="#about" id="nav-about">Haqida</a>
+            <a href="#tariffs" id="nav-tariffs">Tariflar</a>
+            <a href="#contact" id="nav-contact">Bog'lanish</a>
+        </nav>
+        <div class="lang-switcher desktop-lang-switcher">
+            <select id="language-select" onchange="changeLanguage(this.value)">
+                <option value="uz">O'zbekcha</option>
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+            </select>
         </div>
-        <div class="feature-box">
-            <h3>Fast Uploads</h3>
-            <p>Experience lightning-fast uploads with our optimized system.</p>
+        <div class="hamburger-menu" id="hamburger">
+            <i class="fas fa-bars"></i>
         </div>
-        <div class="feature-box">
-            <h3>Easy Access</h3>
-            <p>Access your files anytime, anywhere, on any device.</p>
+    </header>
+
+    <div class="mobile-menu-overlay" id="mobile-menu">
+        <div class="mobile-menu">
+            <button class="close-menu" id="close-menu">&times;</button>
+            <nav class="mobile-nav">
+                <a href="#home" id="nav-home">Bosh sahifa</a>
+                <a href="#features" id="nav-features">Xususiyatlar</a>
+                <a href="#about" id="nav-about">Haqida</a>
+                <a href="#tariffs" id="nav-tariffs">Tariflar</a>
+                <a href="#contact" id="nav-contact">Bog'lanish</a>
+            </nav>
+            <div class="lang-switcher mobile-lang-switcher">
+                <select id="language-select-mobile" onchange="changeLanguage(this.value)">
+                    <option value="uz">O'zbekcha</option>
+                    <option value="ru">Русский</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
         </div>
     </div>
-</section>
 
-<section id="about">
-    <h2>About Us</h2>
-    <p>StarClaud is dedicated to providing seamless and secure cloud storage solutions for businesses and individuals worldwide.</p>
-</section>
+    <section id="home">
+        <h1 id="home-title">Star Claudga Xush Kelibsiz</h1>
+        <p id="home-desc">
+            Star Claud – bu do‘kon boshqaruvi uchun qulay va zamonaviy yechim bo‘lib, moliyaviy
+            ko‘rsatkichlarni kuzatish, mahsulotlarni sotish yoki arendaga berish, ishchilar faoliyatini tahlil qilish
+            va boshqarish imkoniyatlarini taqdim etadi.
+        </p>
+    </section>
 
-<section id="contact">
-    <h2>Contact Us</h2>
-    <form action="#">
-        <input type="text" placeholder="Your Name" required>
-        <input type="email" placeholder="Your Email" required>
-        <textarea rows="5" placeholder="Your Message" required></textarea>
-        <button type="submit">Send Message</button>
-    </form>
-</section>
 
+    <section id="features">
+        <h2 id="features-title">Bizning Xususiyatlarimiz</h2>
+        <div class="features-container">
+            <div class="feature-box">
+                <h3 id="feature1-title">Moliyaviy Tahlil</h3>
+                <p id="feature1-desc">Kunlik, haftalik, oylik va yillik daromadlarni kuzating. Statistikalarda foyda va
+                    xarajatlar
+                    haqida to‘liq ma’lumotga ega bo‘ling.</p>
+            </div>
+            <div class="feature-box">
+                <h3 id="feature2-title">Mahsulot va Arenda</h3>
+                <p id="feature2-desc">Mahsulotlarni sotish yoki arendaga berish jarayonlarini oson boshqaring. Arenda
+                    shartlarini moslashtiring va daromadni oshiring.</p>
+            </div>
+            <div class="feature-box">
+                <h3 id="feature3-title">Ishchi Faoliyatini Kuzatish</h3>
+                <p id="feature3-desc">Ishchilaringizning oyligi, KPI statistikasi va sotuvlar hajmini real vaqt rejimida
+                    kuzating.</p>
+            </div>
+        </div>
+    </section>
+
+
+    <section id="about">
+        <h2 id="about-title">Biz haqimizda</h2>
+        <div class="about-container">
+            <!-- Birinchi karta -->
+            <div class="about-card">
+                <h4>Kompaniya Asoschisi</h4>
+                <img src="https://i.postimg.cc/RhbGDVsP/photo-2025-01-26-20-31-22.jpg" alt="Shaxs rasmi" class="about-img" />
+                <h3>Sotimov Bunyod Sotimboyevich</h3>
+                <h3>Yoshi: 38</h3>
+                <p class="about-role">Proyekt meneger</p>
+                <p class="about-desc">Bugungi to'g'ri deb o'ylaganimiz qachondir noto'g'ri, bugun noto'g'ri deb
+                    o'ylaganimiz
+                    qachondir to'g'riga aylanadi...</p>
+                <div class="social-links">
+                    <a href="https://www.instagram.com/parallel_hayot/" target="_blank"><i class="fab fa-instagram"
+                            style="color: rgb(192, 26, 76);"></i></a>
+                    <a href="https://t.me/bsotimov" target="_blank"><i class="fab fa-telegram"></i></a>
+                </div>
+            </div>
+            <!-- Ikkinchi karta -->
+            <div class="about-card">
+                <h4>Kompaniya Asoschisi</h4>
+                <img src="https://i.postimg.cc/zB7xTknY/IMG-20240510-173736-203.jpg" alt="Shaxs rasmi" class="about-img" />
+                <h3>Odilxonov Muhammad Qaxramonovich</h3>
+                <h3>Yoshi: 18</h3>
+                <p class="about-role">Dasturiy ta'minot loyihalarini boshqaruvchi menejer.</p>
+                <p class="about-desc">Ortga chekinish yo‘q – faqat olg‘a! Hayotning eng qorong‘u damlari ham bir kun
+                    yorug‘lik
+                    bilan almashadi.</p>
+                <div class="social-links">
+                    <a href="https://www.instagram.com/_o_muhammad/" target="_blank"><i class="fab fa-instagram"
+                            style="color: rgb(192, 26, 76);"></i></a>
+                    <a href="https://t.me/Muhammad111h" target="_blank"><i class="fab fa-telegram"></i></a>
+                </div>
+            </div>
+            <!-- Uchinchi karta -->
+            <div class="about-card">
+                <h4>Kompaniya Asoschisi</h4>
+                <img src="https://avatars.mds.yandex.net/i?id=a35abe86bef1268fdae401e1ec330c49e4f2f271-10471613-images-thumbs&n=13"
+                    alt="Shaxs rasmi" class="about-img" />
+                <h3>Zokirov Behruz Shuhratovich</h3>
+                <h3>Yoshi: 17</h3>
+                <p class="about-role">Ma'lumotlar xavfsizligi va saqlanishi menejeri.</p>
+                <p class="about-desc">Ishlayaptimi, tegma!</p>
+                <div class="social-links">
+                    <a href="https://www.instagram.com/behruzzo662/" target="_blank"><i class="fab fa-instagram"
+                            style="color: rgb(192, 26, 76);"></i></a>
+                    <a href="https://t.me/behruzzo662" target="_blank"><i class="fab fa-telegram"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section id="tariffs" style="background: #fff; padding: 150px 20px;">
+        <h1 id="tariffs-title" style="text-align: center; font-size: 36px; margin-bottom: 20px; color: #333;">StarClaud
+            Tariflari</h1>
+        <h2 id="tariffs-desc" style="text-align: center; font-size: 20px; margin-bottom: 40px; color: #666;">Bizning
+            moslashuvchan tariflarimizni tanlang</h2>
+        <div class="tariff-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
+            <!-- Tarif Standart -->
+            <div class="tariff"
+                style="background-image: url(https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6dQEa7Wcs2gVzUxKMqyxxlDNWIUvl6kIhNg&s); border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); width: 300px; padding: 20px; text-align: center;">
+                <h3 style="color: #37323b; margin-bottom: 15px;">Standart</h3>
+                <select onchange="updatePrice('standart', this.value)"
+                    style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9;">
+                    <option value="1">1 oy</option>
+                    <option value="3">3 oy</option>
+                    <option value="6">6 oy</option>
+                    <option value="12">12 oy</option>
+                </select>
+                <div class="price" id="price-standart"
+                    style="font-size: 24px; font-weight: 600; color: #37323b; margin: 15px 0;">299,000 so'm</div>
+                <ul
+                    style="text-align: start; list-style: none; padding: 0; margin: 10px 0; font-size: 16px; color: #fff;">
+                    <li>
+                        <i class="fa-solid fa-user-tie" style=" font-size:18px; color: #000;"></i>
+                        Direktor: 1 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-user-shield" style=" font-size:18px; color: #3815d7e4;"></i>
+                        Menejer: 1 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-user-tag" style=" font-size:18px; color: #55c818;"></i>
+                        Sotuvchi: 3 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-list" style=" font-size:18px; color: #e70b0b;"></i>
+                        Kategoriya: 50 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-boxes-stacked" style=" font-size:18px; color: #5e4305;"></i>
+                        Mahsulot: 2000 ta
+                    </li>
+                </ul>
+            </div>
+            <!-- Tarif Premium -->
+            <div class="tariff"
+                style="background-image: url(https://st.depositphotos.com/1592123/2359/i/450/depositphotos_23599365-stock-photo-silver-metal-background-chrome-texture.jpg); border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); width: 300px; padding: 20px; text-align: center;">
+                <h3 style="color: #37323b; margin-bottom: 15px;">Premium</h3>
+                <select onchange="updatePrice('premium', this.value)"
+                    style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9;">
+                    <option value="1">1 oy</option>
+                    <option value="3">3 oy</option>
+                    <option value="6">6 oy</option>
+                    <option value="12">12 oy</option>
+                </select>
+                <div class="price" id="price-premium"
+                    style="font-size: 24px; font-weight: 600; color: #37323b; margin: 15px 0;">599,000 so'm</div>
+                <ul
+                    style="text-align: start; list-style: none; padding: 0; margin: 10px 0; font-size: 16px; color: #fff;">
+                    <li>
+                        <i class="fa-solid fa-user-tie" style=" font-size:18px; color: #000;"></i>
+                        Direktor: 1 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-user-shield" style=" font-size:18px; color: #3815d7e4;"></i>
+                        Menejer: 3 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-user-tag" style=" font-size:18px; color: #55c818;"></i>
+                        Sotuvchi: 7 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-list" style=" font-size:18px; color: #e70b0b;"></i>
+                        Kategoriya: 100 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-boxes-stacked" style=" font-size:18px; color: #5e4305;"></i>
+                        Mahsulot: 5000 ta
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Tarif Gold -->
+            <div class="tariff"
+                style="background-image: url(https://img.freepik.com/free-vector/gold-metal-background_78370-154.jpg?t=st=1737830959~exp=1737834559~hmac=18ba570329e93825bec792cfa50177773cf782c972067a990c9f6262649f84bb&w=1060);  background-size: cover; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); width: 300px; padding: 20px; text-align: center;">
+                <h3 style="color: #37323b; margin-bottom: 15px;">Gold</h3>
+                <select onchange="updatePrice('gold', this.value)"
+                    style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9;">
+                    <option value="1">1 oy</option>
+                    <option value="3">3 oy</option>
+                    <option value="6">6 oy</option>
+                    <option value="12">12 oy</option>
+                </select>
+                <div class="price" id="price-gold"
+                    style="font-size: 24px; font-weight: 600; color: #37323b; margin: 15px 0;">999,000 so'm</div>
+                <ul
+                    style="text-align: start; list-style: none; padding: 0; margin: 10px 0; font-size: 16px; color: #fff;">
+                    <li>
+                        <i class="fa-solid fa-user-tie" style=" font-size:18px; color: #000;"></i>
+                        Direktor: 1 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-user-shield" style=" font-size:18px; color: #3815d7e4;"></i>
+                        Menejer: 5 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-user-tag" style=" font-size:18px; color: #55c818;"></i>
+                        Sotuvchi: 10 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-list" style=" font-size:18px; color: #e70b0b;"></i>
+                        Kategoriya: 200 ta
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-boxes-stacked" style=" font-size:18px; color: #5e4305;"></i>
+                        Mahsulot: 10000 ta
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+
+
+
+    <section id="contact">
+        <h2 id="contact-title">Mahsus tarif</h2>
+        <p style="color: #fff;    font-size: 18px;
+            line-height: 1.8;
+            max-width: 800px;
+            margin: 20px auto;
+            animation: fadeIn 2s ease-in-out;">Mahsulot nomi, miqdori va kategoriyani kiriting – sizga mos narxlarni
+            taqdim etamiz!</p>
+        <form action="#">
+            <!-- Do'kon nomi -->
+            <input type="text" placeholder="Do'kon nomi" id="store" required>
+
+            <!--  familiya, ism, sharif -->
+            <input type="text" placeholder="Familiya, ism, sharif" id="name" required>
+
+            <!--  telefon raqam -->
+            <input type="number" placeholder="Telefon raqamizni kiriting" id="phone" required>
+            <!-- Yosh -->
+            <input type="number" placeholder="Yoshingiz" id="age" required>
+
+            <!-- Menejerlar soni -->
+            <input type="number" placeholder="Menejerlar soni" id="manager-count" required>
+
+            <!-- Sotuvchilar soni -->
+            <input type="number" placeholder="Sotuvchilar soni" id="seller-count" required>
+
+            <!-- Mahsulotlar soni -->
+            <input type="number" placeholder="Kategoriyalar soni" id="category-count" required>
+
+            <!-- Mahsulotlar soni -->
+            <input type="number" placeholder="Mahsulotlar soni" id="product-count" required>
+
+            <!-- Submit tugmasi -->
+            <button type="submit" id="contact-submit">Ma'lumotni yuborish</button>
+        </form>
+    </section>
+
+
+
+    <script>
+        const translations = {
+            uz: {
+                title: "StarClaud",
+                nav: ["Bosh sahifa", "Xususiyatlar", "Haqida", "Bog'lanish"],
+                home: ["StarClaudga xush kelibsiz", "Star Claud – bu do‘kon boshqaruvi uchun qulay va zamonaviy yechim bo‘lib, moliyaviy ko‘rsatkichlarni kuzatish, mahsulotlarni sotish yoki arendaga berish, ishchilar faoliyatini tahlil qilish va boshqarish imkoniyatlarini taqdim etadi."],
+                features: ["Bizning xususiyatlarimiz", "Moliyaviy Tahlil", "Kunlik, haftalik, oylik va yillik daromadlarni kuzating. Statistikalarda foyda va xarajatlar haqida to‘liq ma’lumotga ega bo‘ling.", "Mahsulot va Arenda", "Mahsulotlarni sotish yoki arendaga berish jarayonlarini oson boshqaring. Arenda shartlarini moslashtiring va daromadni oshiring.", "Ishchi Fa oliyatini Kuzatish", "Ishchilaringizning oyligi, KPI statistikasi va sotuvlar hajmini real vaqt rejimida kuzating.",],
+                about: ["Biz haqimizda",],
+                contact: ["Mahsus tarif", "Do'kon nomi", "Familiya, ism, sharif", "Telefon raqamizni kiriting", "Yoshingiz", "Menejerlar soni", "Sotuvchilar soni", "Mahsulotlar soni", "Ma'lumotni yuborish"]
+            },
+            en: {
+                title: "StarClaud",
+                nav: ["Home", "Features", "About", "Contact"],
+                home: ["Welcome to StarClaud", "Star Claud is a convenient and modern solution for store management that provides opportunities to monitor financial performance, sell or rent products, analyze and manage employee activities."],
+                features: ["Our Features", "Financial Analysis", "Track daily, weekly, monthly, and yearly income. Get detailed information about profits and expenses in the statistics.", "Products and Rentals", "Easily manage product sales or rental processes. Customize rental terms and increase revenue.", "Employee Activity Monitoring", "Monitor your employees' salaries, KPI statistics, and sales volume in real time."],
+                about: ["About Us"],
+                contact: ["Special rate", "Store Name", "Surname, first name, first name", "Enter your phone number", "Your Age", "Number of Managers", "Number of Sellers", "Number of Categories", "Number of Products", "Submit Information"]
+            },
+            ru: {
+                title: "СтарКлауд",
+                nav: ["Главная", "Функции", "О нас", "Контакты"],
+                home: ["Добро пожаловать в СтарКлауд", "Star Claud – это удобное и современное решение для управления магазином, предоставляющее возможности для отслеживания финансовых показателей, продажи или аренды товаров, анализа и управления деятельностью сотрудников."],
+                features: ["Наши функции", "Финансовый анализ", "Отслеживайте ежедневный, еженедельный, ежемесячный и годовой доход. Получайте подробную информацию о прибыли и расходах.", "Товары и аренда", "Управляйте продажей или сдачей товаров в аренду. Настраивайте условия аренды и увеличивайте доход.", "Мониторинг деятельности сотрудников", "Мониторинг деятельности сотрудников",],
+                about: ["О нас"],
+                contact: ["Специальный тариф", "Название магазина", "Фамилия, имя, Отчества", "Введите свой номер телефона", "Ваш возраст", "Количество менеджеров", "Количество продавцов", "Количество категорий", "Количество продуктов", "Отправить информацию"]
+            }
+        };
+
+        const selectElement = document.getElementById('language-select');
+        const dropdownIcon = document.getElementById('dropdown-icon');
+
+        const hamburger = document.getElementById("hamburger");
+        const mobileMenu = document.getElementById("mobile-menu");
+        const closeMenu = document.getElementById("close-menu");
+
+        // Hamburger menyuni ochish
+        hamburger.addEventListener("click", () => {
+            mobileMenu.style.display = "flex";
+        });
+
+        // Hamburger menyuni yopish
+        closeMenu.addEventListener("click", () => {
+            mobileMenu.style.display = "none";
+        });
+
+        // Tilni o'zgartirish funksiyasi
+        function changeLanguage(language) {
+            alert(`Tanlangan til: ${language}`);
+        }
+
+        // Tilni o'zgartirish funksiyasi
+        selectElement.addEventListener('change', function () {
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            const iconPath = selectedOption.getAttribute('data-icon');
+            dropdownIcon.src = iconPath; // Gerbni almashtirish
+        });
+
+        // Tilni o'zgartirish funksiyasi
+        function changeLanguage(lang) {
+            const t = translations[lang];
+            document.getElementById("title").innerText = t.title;
+            document.getElementById("nav-home").innerText = t.nav[0];
+            document.getElementById("nav-features").innerText = t.nav[1];
+            document.getElementById("nav-about").innerText = t.nav[2];
+            document.getElementById("nav-contact").innerText = t.nav[3];
+            document.getElementById("home-title").innerText = t.home[0];
+            document.getElementById("home-desc").innerText = t.home[1];
+            document.getElementById("features-title").innerText = t.features[0];
+            document.getElementById("feature1-title").innerText = t.features[1];
+            document.getElementById("feature1-desc").innerText = t.features[2];
+            document.getElementById("feature2-title").innerText = t.features[3];
+            document.getElementById("feature2-desc").innerText = t.features[4];
+            document.getElementById("feature3-title").innerText = t.features[5];
+            document.getElementById("feature3-desc").innerText = t.features[6];
+            document.getElementById("about-title").innerText = t.about[0];
+            document.getElementById("contact-title").innerText = t.contact[0];
+            document.getElementById("store").placeholder = t.contact[1];
+            document.getElementById("name").placeholder = t.contact[2];
+            document.getElementById("phone").placeholder = t.contact[3];
+            document.getElementById("age").placeholder = t.contact[4];
+            document.getElementById("manager-count").placeholder = t.contact[5];
+            document.getElementById("seller-count").placeholder = t.contact[6];
+            document.getElementById("category-count").placeholder = t.contact[7];
+            document.getElementById("product-count").placeholder = t.contact[8];
+            document.getElementById("contact-submit").innerText = t.contact[9];
+        }
+
+        const prices = {
+            standart: {
+                1: '299,000 so\'m',
+                3: '699,000 so\'m',
+                6: '1,399,000 so\'m',
+                12: '2,799,000 so\'m'
+            },
+            premium: {
+                1: '599,000 so\'m',
+                3: '1,599,000 so\'m',
+                6: '3,099,000 so\'m',
+                12: '6,199,000 so\'m'
+            },
+            gold: {
+                1: '999,000 so\'m',
+                3: '2,799,000 so\'m',
+                6: '5,499,000 so\'m',
+                12: '9,999,000 so\'m'
+            }
+        };
+
+        function updatePrice(tariff, duration) {
+            document.getElementById(`price-${tariff}`).innerText = prices[tariff][duration];
+        }
+    </script>
 </body>
+
 </html>
