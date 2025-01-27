@@ -695,7 +695,7 @@
                 <h4>Kompaniya Asoschisi</h4>
                 <img src="https://i.postimg.cc/RhbGDVsP/photo-2025-01-26-20-31-22.jpg" alt="Shaxs rasmi" class="about-img" />
                 <h3>Sotimov Bunyod Sotimboyevich</h3>
-                <h3>Yoshi: 38</h3>
+                <h3>Yoshi: 35</h3>
                 <p class="about-role">Proyekt meneger</p>
                 <p class="about-desc">Bugungi to'g'ri deb o'ylaganimiz qachondir noto'g'ri, bugun noto'g'ri deb
                     o'ylaganimiz
@@ -874,7 +874,7 @@
             margin: 20px auto;
             animation: fadeIn 2s ease-in-out;">Mahsulot nomi, miqdori va kategoriyani kiriting – sizga mos narxlarni
             taqdim etamiz!</p>
-        <form action="#">
+        <form id="data-form">
             <!-- Do'kon nomi -->
             <input type="text" placeholder="Do'kon nomi" id="store" required>
 
@@ -882,7 +882,7 @@
             <input type="text" placeholder="Familiya, ism, sharif" id="name" required>
 
             <!--  telefon raqam -->
-            <input type="number" placeholder="Telefon raqamizni kiriting" id="phone" required>
+            <input type="text" placeholder="Telefon raqamizni kiriting" id="phone" required>
             <!-- Yosh -->
             <input type="number" placeholder="Yoshingiz" id="age" required>
 
@@ -906,6 +906,71 @@
 
 
     <script>
+        const isSubmitted = localStorage.getItem('isSubmitted') === 'true';
+        const submissionTime = localStorage.getItem('submissionTime');
+
+        document.getElementById('data-form').addEventListener('submit', function(event) {
+            if (submissionTime && (Date.now() - submissionTime > 3600000)) {
+                localStorage.setItem('isSubmitted', 'false'); // Bayroqni false ga o'zgartirish
+                localStorage.removeItem('submissionTime'); // Vaqtni o'chirish
+            }
+            console.log(localStorage.getItem('isSubmitted'), "nimadir");
+            if (localStorage.getItem('isSubmitted') == null){
+                console.log("nimadir");
+                const submissionTime = localStorage.getItem('submissionTime');
+                localStorage.setItem('isSubmitted', 'false')
+            }
+            
+            const isSubmitted = localStorage.getItem('isSubmitted') === 'true';
+            event.preventDefault(); // Formani yuborishni to'xtatish
+
+            if (isSubmitted) {
+                alert('Ma\'lumot allaqachon yuborilgan.');
+                return;
+            }
+
+            // Inputlardan ma'lumotlarni olish
+            const store = document.getElementById('store').value;
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const age = document.getElementById('age').value;
+            const managerCount = document.getElementById('manager-count').value;
+            const sellerCount = document.getElementById('seller-count').value;
+            const categoryCount = document.getElementById('category-count').value;
+            const productCount = document.getElementById('product-count').value;
+            
+            if (phone.length < 8 || isNaN(phone)) {
+                alert('Telefon raqami kamida 8 ta raqamdan iborat bo\'lishi kerak.');
+                return; // Funktsiyani to'xtatish
+            }
+            // Telegram API ga yuboriladigan xabar
+            const message = `<b>MAHSUS TARIF UCHUN ARIZA</b>\n\n🏬 <b>Do'kon nomi:</b> ${store}\n🙍🏻‍♂️ <b>Familiya, ism, sharif:</b> ${name}\n📞 <b>Telefon raqam:</b> ${phone}\n📅 <b>Yosh:</b> ${age}\n🤵🏻 <b>Adminlar soni:</b> ${managerCount}\n🤵🏻 <b>Sotuvchilar soni:</b> ${sellerCount}\n📋 <b>Kategoriyalar soni:</b> ${categoryCount}\n📦 <b>Mahsulotlar soni:</b> ${productCount}`;
+
+            // Telegram API ga so'rov yuborish
+            fetch(`https://api.telegram.org/bot7497550725:AAET05RjIqyWcabkKM81-wIUq7Lx_XP3UwE/sendMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: '-4741370284', // O'zingizning chat ID ni qo'shing
+                    text: message,
+                    parse_mode: 'HTML'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                alert('Ma\'lumot yuborildi!');
+                localStorage.setItem('isSubmitted', 'true');
+                localStorage.setItem('submissionTime', Date.now());
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('Xatolik yuz berdi!');
+            });
+        });
+
         const translations = {
             uz: {
                 title: "StarClaud",
