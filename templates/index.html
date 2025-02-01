@@ -30,7 +30,8 @@
 
     <!-- Favicon -->
     <link rel="icon" href="https://i.postimg.cc/PrDf6pww/Star-claud-new2.png" type="image/png">
-
+    <!-- link icon -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
     <title>StarClaud - Do'koningizni boshqarish tizimi</title>
     <style>
@@ -604,10 +605,40 @@
         }
 
         footer {
-            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to right, #0099cc, #d9a800);
+            box-shadow: 10px 2px 35px rgba(0, 0, 0, 0.381);
+            color: #fff;
             text-align: center;
-            font-size: 14px;
-            color: #666;
+            padding: 10px 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        footer p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+
+        footer p span {
+            font-weight: bold;
+            color: #e70b0b;
+        }
+
+        .social-links {
+            margin-top: 10px;
+        }
+
+        .social-links a {
+            color: white;
+            font-size: 22px;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: #f39c12;
         }
 
 
@@ -746,6 +777,30 @@
                 font-size: 14px;
             }
 
+            footer {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
+                padding: 15px 5px;
+            }
+
+            footer p span {
+                font-weight: bold;
+                color: #e70b0b;
+            }
+
+            footer p {
+                font-size: 14px;
+                padding: 5px 0;
+            }
+
+            .social-links a {
+                font-size: 18px;
+                margin: 0 8px;
+                padding: 5px 0;
+            }
+
 
         }
     </style>
@@ -807,7 +862,7 @@
                 <button id="features-btn" onclick="location.href='#tariffs'">Tariflarni Ko‘rish</button>
             </div>
             <div class="home-image">
-                <img src="https://i.postimg.cc/gJ5dsmcs/Group-7465.png" alt="Star Claud Preview" id="home-slider">
+                <img src="./img_starclaud/Group 7465.png" alt="Star Claud Preview" id="home-slider">
                 <button class="slider-btn left" onclick="prevSlide()">&#9665;</button>
                 <button class="slider-btn right" onclick="nextSlide()">&#9655;</button>
             </div>
@@ -846,7 +901,8 @@
             <!-- Birinchi karta -->
             <div class="about-card">
                 <h4>VIP 1</h4>
-                <img src="https://i.postimg.cc/RhbGDVsP/photo-2025-01-26-20-31-22.jpg" alt="Shaxs rasmi" class="about-img" />
+                <img src="https://i.postimg.cc/RhbGDVsP/photo-2025-01-26-20-31-22.jpg" alt="Shaxs rasmi"
+                    class="about-img" />
                 <h3>Bunyod Sotimboyevich</h3>
                 <h3>Yoshi: 35</h3>
                 <p class="about-role">Proyekt menejeri</p>
@@ -863,7 +919,8 @@
             <!-- Ikkinchi karta -->
             <div class="about-card">
                 <h4>Mijozlar Bilan Ishlovchi</h4>
-                <img src="https://i.postimg.cc/Ls2sg9hZ/image-2025-01-31-16-25-31.png" alt="Shaxs rasmi" class="about-img" />
+                <img src="https://i.postimg.cc/Ls2sg9hZ/image-2025-01-31-16-25-31.png" alt="Shaxs rasmi"
+                    class="about-img" />
                 <h3>Begmurod Xasanboyevich</h3>
                 <h3>Yoshi: 31</h3>
                 <p class="about-role">Loyihaning mijozlarni jalb qilish bo‘yicha mutaxassisi</p>
@@ -879,7 +936,8 @@
             <!-- Uchinchi karta -->
             <div class="about-card">
                 <h4>VIP 2</h4>
-                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi" class="about-img" />
+                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi"
+                    class="about-img" />
                 <h3>Muhammad Qaxramonovich</h3>
                 <h3>Yoshi: 18</h3>
                 <p class="about-role">Dasturiy ta'minot loyihalarini boshqaruvchi menejer</p>
@@ -899,7 +957,8 @@
             <!-- Birinchi karta -->
             <div class="about-card">
                 <h4>Savdo Menejeri</h4>
-                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi" class="about-img" />
+                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi"
+                    class="about-img" />
                 <h3>Bilolbek Nodirbekovich</h3>
                 <h3>Yoshi: 18</h3>
                 <p class="about-role">Loyihaning savdo bo‘yicha menejeri</p>
@@ -915,7 +974,8 @@
             <!-- Ikkinchi karta -->
             <div class="about-card">
                 <h4>VIP 3</h4>
-                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi" class="about-img" />
+                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi"
+                    class="about-img" />
                 <h3>Behruz Shuhratovich</h3>
                 <h3>Yoshi: 17</h3>
                 <p class="about-role">Ma'lumotlar xavfsizligi va saqlanishi menejeri.</p>
@@ -929,7 +989,8 @@
             <!-- Uchinchi karta -->
             <div class="about-card">
                 <h4>iOS Developer</h4>
-                <img src="https://i.postimg.cc/C53hhYW5/Doniyor-ios-developer.jpg" alt="Shaxs rasmi" class="about-img" />
+                <img src="https://i.postimg.cc/C53hhYW5/Doniyor-ios-developer.jpg" alt="Shaxs rasmi"
+                    class="about-img" />
                 <h3>Doniyor Alijonivich</h3>
                 <h3>Yoshi: 23</h3>
                 <p class="about-role">iPhone ilovalari dasturchisi</p>
@@ -1108,6 +1169,18 @@
         </form>
     </section>
 
+    <footer>
+        <p>Sayt ishlab chiqqan: <span>VIP 2, VIP 3</span></p>
+        <p>&copy; 2022 Star Claud. Barcha huquqlar himoyalangan.</p>
+        <div class="social-links">
+            <a href="https://www.instagram.com/starclaud.uz/" target="_blank">
+                <i class="fab fa-instagram"></i>
+            </a>
+            <a href="https://t.me/starclaud_uz" target="_blank">
+                <i class="fab fa-telegram"></i>
+            </a>
+        </div>
+    </footer>
 
 
     <script>
