@@ -4,10 +4,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-site-verification" content="4IK770a0cZh4pgCs-sg6owQc1Kx_VrWh_hthXwnbbZc" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <title>StarClaud</title>
 
+    <!-- SEO uchun meta teglar -->
+    <meta name="description"
+        content="StarClaud - Do'koningizni boshqarish, savdo, arenda va moliyaviy nazorat qilish tizimi.">
+    <meta name="keywords"
+        content="StarClaud, savdo tizimi, arenda, moliyaviy nazorat, do'kon boshqarish, biznes avtomatlashtirish">
+    <meta name="author" content="StarClaud Team">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph (Facebook, Telegram, LinkedIn uchun) -->
+    <meta property="og:title" content="StarClaud - Do'koningizni boshqarish tizimi">
+    <meta property="og:description"
+        content="Savdo va arenda jarayonlarini qulay boshqarish uchun StarClaud ilovasidan foydalaning.">
+    <meta property="og:image" content="https://starclaud.uz/img_starclaud/Star_claud_new2.png">
+    <meta property="og:url" content="https://starclaud.uz">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter uchun SEO -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="StarClaud - Do'koningizni boshqarish tizimi">
+    <meta name="twitter:description"
+        content="Savdo va arenda jarayonlarini qulay boshqarish uchun StarClaud ilovasidan foydalaning.">
+    <meta name="twitter:image" content="https://starclaud.uz/img_starclaud/Star_claud_new2.png">
+
+    <!-- Favicon -->
+    <link rel="icon" href="https://i.postimg.cc/PrDf6pww/Star-claud-new2.png" type="image/png">
+
+
+    <title>StarClaud - Do'koningizni boshqarish tizimi</title>
     <style>
         /* Scrollning umumiy kengligi */
         ::-webkit-scrollbar {
@@ -39,7 +64,8 @@
 
         /* Hover effekti */
         ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to right, #00ccff, #ffcb00);
+            background: linear-gradient(to bottom, #0099cc, #d9a800);
+
             /* Hoverda quyuq ranglar */
         }
 
@@ -67,7 +93,7 @@
             position: fixed;
             top: 0;
             width: 100%;
-            background: linear-gradient(to right, #00ccff, #ffcb00);
+            background: linear-gradient(to right, #0099cc, #d9a800);
             color: #fff;
             padding: 15px 20px;
             display: flex;
@@ -171,32 +197,111 @@
         /* Home Section */
         #home {
             height: 100vh;
-            background: linear-gradient(to right, #00ccff, #ffcb00);
+            background: linear-gradient(to right, #0099cc, #d9a800);
             color: #fff;
+            height: auto;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 0 20px;
-            /* Extra padding for responsiveness */
-            text-align: center;
+            flex-wrap: wrap;
+            padding: 90px 20px;
+            text-align: left;
             animation: fadeIn 2s ease-in-out;
         }
 
-        #home h1 {
+        .home-container {
+            display: flex;
+            align-items: center;
+            max-width: 1200px;
+            width: 100%;
+            gap: 40px;
+        }
+
+        .home-text {
+            flex: 1;
+            max-width: 500px;
+        }
+
+        #home-title {
             font-size: 3rem;
-            /* Base font size */
+            font-weight: 700;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #home-text-title {
+            font-size: 3rem;
             margin-bottom: 20px;
             font-weight: 700;
             text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
         }
 
-        #home p {
+        #home-desc {
             font-size: 1.2rem;
-            /* Base font size */
-            max-width: 600px;
             line-height: 1.8;
             text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        #features-btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            background: #ffcb00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        #features-btn:hover {
+            background: #e6b800;
+        }
+
+        .home-image {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .home-image img {
+            width: 100%;
+            max-width: 270px;
+            border-radius: 10px;
+            height: 550px;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .slider-btn {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.7);
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            font-size: 18px;
+            border-radius: 50%;
+            transition: 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .slider-btn:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .left {
+            left: 140px;
+        }
+
+        .right {
+            right: 140px;
         }
 
         /* Features Section */
@@ -257,20 +362,29 @@
         /* About Section */
         /* Biz haqimizda */
         #about {
-            padding: 100px 20px;
-            background: linear-gradient(to right, #00ccff, #ffcb00);
+            padding: 80px 20px;
+            background: linear-gradient(to right, #0099cc, #d9a800);
             color: #fff;
             text-align: center;
         }
 
         #about h2 {
             font-size: 36px;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             animation: fadeIn 1s ease-in-out;
+        }
+
+        .about-text {
+            font-size: 18px;
+            max-width: 600px;
+            margin: 0 auto 40px;
+            color: #fff;
+            font-weight: bold;
         }
 
         .about-container {
             display: flex;
+            margin: 0 auto 40px;
             justify-content: center;
             flex-wrap: wrap;
             gap: 20px;
@@ -287,10 +401,9 @@
             text-align: center;
         }
 
-
         .about-card h4 {
-            font-size: 18px;
-            color: #0077cc;
+            font-size: 20px;
+            color: #d32f2f;
             margin-bottom: 10px;
             font-weight: bold;
         }
@@ -303,13 +416,15 @@
         .about-img {
             width: 180px;
             height: 180px;
-            border-radius: 25%;
+            border-radius: 50%;
             margin-bottom: 15px;
+            object-fit: cover;
+            object-position: center;
         }
 
         .about-role {
-            font-size: 15px;
-            color: #00ccff;
+            font-size: 16px;
+            color: #0077cc;
             margin-bottom: 10px;
             font-weight: bold;
         }
@@ -334,7 +449,8 @@
         /* Contact Section */
         /* Kontakt bo'limining umumiy sozlamalari */
         #contact {
-            background: linear-gradient(to right, #00ccff, #ffcb00);
+            background: linear-gradient(to right, #0099cc, #d9a800);
+
             padding: 50px 20px;
             /* Mobilga moslashish uchun ichki bo‘shliq moslashtirildi */
             text-align: center;
@@ -537,19 +653,37 @@
             }
 
             #home {
-                padding: 20px;
-                /* Extra padding for smaller screens */
+                height: auto;
+                padding: 100px 20px;
             }
 
-            #home h1 {
+            .home-container {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+
+            #home-title {
                 font-size: 2rem;
-                /* Adjusted for phones */
+                text-align: center;
+                margin-bottom: 10px;
             }
 
-            #home p {
+            #home-desc {
                 font-size: 0.9rem;
-                /* Adjusted for phones */
                 line-height: 1.6;
+            }
+
+            .home-image img {
+                max-width: 300px;
+            }
+
+            .left {
+                left: -30px;
+            }
+
+            .right {
+                right: -30px;
             }
 
             #contact {
@@ -580,6 +714,10 @@
 
             #about h2 {
                 font-size: 28px;
+            }
+
+            .about-text {
+                font-size: 16px;
             }
 
             .about-container {
@@ -657,12 +795,25 @@
 
     <section id="home">
         <h1 id="home-title">Star Claudga Xush Kelibsiz</h1>
-        <p id="home-desc">
-            Star Claud – bu do‘kon boshqaruvi uchun qulay va zamonaviy yechim bo‘lib, moliyaviy
-            ko‘rsatkichlarni kuzatish, mahsulotlarni sotish yoki arendaga berish, ishchilar faoliyatini tahlil qilish
-            va boshqarish imkoniyatlarini taqdim etadi.
-        </p>
+        <div class="home-container">
+            <div class="home-text">
+                <h1 id="home-text-title">Login Qismi</h1>
+
+                <p id="home-desc">
+                    Login qismi bo‘lib, foydalanuvchilar tizimga kirish imkoniyatini beradi. Kirish uchun foydalanuvchi
+                    nomi va parolni
+                    kiritish talab qilinadi.
+                </p>
+                <button id="features-btn" onclick="location.href='#tariffs'">Tariflarni Ko‘rish</button>
+            </div>
+            <div class="home-image">
+                <img src="https://i.postimg.cc/gJ5dsmcs/Group-7465.png" alt="Star Claud Preview" id="home-slider">
+                <button class="slider-btn left" onclick="prevSlide()">&#9665;</button>
+                <button class="slider-btn right" onclick="nextSlide()">&#9655;</button>
+            </div>
+        </div>
     </section>
+
 
 
     <section id="features">
@@ -690,17 +841,19 @@
 
     <section id="about">
         <h2 id="about-title">Biz haqimizda</h2>
+
         <div class="about-container">
             <!-- Birinchi karta -->
             <div class="about-card">
-                <h4>Kompaniya Asoschisi</h4>
+                <h4>VIP 1</h4>
                 <img src="https://i.postimg.cc/RhbGDVsP/photo-2025-01-26-20-31-22.jpg" alt="Shaxs rasmi" class="about-img" />
-                <h3>Sotimov Bunyod Sotimboyevich</h3>
+                <h3>Bunyod Sotimboyevich</h3>
                 <h3>Yoshi: 35</h3>
-                <p class="about-role">Proyekt meneger</p>
-                <p class="about-desc">Bugungi to'g'ri deb o'ylaganimiz qachondir noto'g'ri, bugun noto'g'ri deb
-                    o'ylaganimiz
-                    qachondir to'g'riga aylanadi...</p>
+                <p class="about-role">Proyekt menejeri</p>
+                <p class="about-desc">
+                    Bugungi to'g'ri deb o'ylaganimiz qachondir noto'g'ri, bugun noto'g'ri deb o'ylaganimiz qachondir
+                    to'g'riga aylanadi...
+                </p>
                 <div class="social-links">
                     <a href="https://www.instagram.com/parallel_hayot/" target="_blank"><i class="fab fa-instagram"
                             style="color: rgb(192, 26, 76);"></i></a>
@@ -709,26 +862,61 @@
             </div>
             <!-- Ikkinchi karta -->
             <div class="about-card">
-                <h4>Kompaniya Asoschisi</h4>
-                <img src="https://i.postimg.cc/zB7xTknY/IMG-20240510-173736-203.jpg" alt="Shaxs rasmi" class="about-img" />
-                <h3>Odilxonov Muhammad Qaxramonovich</h3>
+                <h4>Mijozlar Bilan Ishlovchi</h4>
+                <img src="https://i.postimg.cc/Ls2sg9hZ/image-2025-01-31-16-25-31.png" alt="Shaxs rasmi" class="about-img" />
+                <h3>Begmurod Xasanboyevich</h3>
+                <h3>Yoshi: 31</h3>
+                <p class="about-role">Loyihaning mijozlarni jalb qilish bo‘yicha mutaxassisi</p>
+                <p class="about-desc">
+                    Har bir mijoz – bu yangi imkoniyat. Yaxshi xizmat – bu muvaffaqiyat kaliti.
+                </p>
+                <div class="social-links">
+                    <a href="https://www.instagram.com/bekmurod_ismatov" target="_blank"><i class="fab fa-instagram"
+                            style="color: rgb(192, 26, 76);"></i></a>
+                    <a href="https://t.me/Bekmurod_Ismatov" target="_blank"><i class="fab fa-telegram"></i></a>
+                </div>
+            </div>
+            <!-- Uchinchi karta -->
+            <div class="about-card">
+                <h4>VIP 2</h4>
+                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi" class="about-img" />
+                <h3>Muhammad Qaxramonovich</h3>
                 <h3>Yoshi: 18</h3>
-                <p class="about-role">Dasturiy ta'minot loyihalarini boshqaruvchi menejer.</p>
-                <p class="about-desc">Ortga chekinish yo‘q – faqat olg‘a! Hayotning eng qorong‘u damlari ham bir kun
-                    yorug‘lik
-                    bilan almashadi.</p>
+                <p class="about-role">Dasturiy ta'minot loyihalarini boshqaruvchi menejer</p>
+                <p class="about-desc">
+                    Ortga chekinish yo‘q – faqat olg‘a! Hayotning eng qorong‘u damlari ham bir kun yorug‘lik bilan
+                    almashadi.
+                </p>
                 <div class="social-links">
                     <a href="https://www.instagram.com/_o_muhammad/" target="_blank"><i class="fab fa-instagram"
                             style="color: rgb(192, 26, 76);"></i></a>
                     <a href="https://t.me/Muhammad111h" target="_blank"><i class="fab fa-telegram"></i></a>
                 </div>
             </div>
-            <!-- Uchinchi karta -->
+
+        </div>
+        <div class="about-container">
+            <!-- Birinchi karta -->
             <div class="about-card">
-                <h4>Kompaniya Asoschisi</h4>
-                <img src="https://avatars.mds.yandex.net/i?id=a35abe86bef1268fdae401e1ec330c49e4f2f271-10471613-images-thumbs&n=13"
-                    alt="Shaxs rasmi" class="about-img" />
-                <h3>Zokirov Behruz Shuhratovich</h3>
+                <h4>Savdo Menejeri</h4>
+                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi" class="about-img" />
+                <h3>Bilolbek Nodirbekovich</h3>
+                <h3>Yoshi: 18</h3>
+                <p class="about-role">Loyihaning savdo bo‘yicha menejeri</p>
+                <p class="about-desc">
+                    taslim bo'lmang
+                </p>
+                <div class="social-links">
+                    <a href="https://www.instagram.com/ssup.bil" target="_blank"><i class="fab fa-instagram"
+                            style="color: rgb(192, 26, 76);"></i></a>
+                    <a href="https://t.me/ssup305" target="_blank"><i class="fab fa-telegram"></i></a>
+                </div>
+            </div>
+            <!-- Ikkinchi karta -->
+            <div class="about-card">
+                <h4>VIP 3</h4>
+                <img src="https://i.postimg.cc/7hd65STx/image-removebg-preview.png" alt="Shaxs rasmi" class="about-img" />
+                <h3>Behruz Shuhratovich</h3>
                 <h3>Yoshi: 17</h3>
                 <p class="about-role">Ma'lumotlar xavfsizligi va saqlanishi menejeri.</p>
                 <p class="about-desc">Ishlayaptimi, tegma!</p>
@@ -736,6 +924,22 @@
                     <a href="https://www.instagram.com/behruzzo662/" target="_blank"><i class="fab fa-instagram"
                             style="color: rgb(192, 26, 76);"></i></a>
                     <a href="https://t.me/behruzzo662" target="_blank"><i class="fab fa-telegram"></i></a>
+                </div>
+            </div>
+            <!-- Uchinchi karta -->
+            <div class="about-card">
+                <h4>iOS Developer</h4>
+                <img src="https://i.postimg.cc/C53hhYW5/Doniyor-ios-developer.jpg" alt="Shaxs rasmi" class="about-img" />
+                <h3>Doniyor Alijonivich</h3>
+                <h3>Yoshi: 23</h3>
+                <p class="about-role">iPhone ilovalari dasturchisi</p>
+                <p class="about-desc">
+                    Odamlar xohlaydigan narsani yarat.
+                </p>
+                <div class="social-links">
+                    <a href="https://www.instagram.com/donioscode/" target="_blank"><i class="fab fa-instagram"
+                            style="color: rgb(192, 26, 76);"></i></a>
+                    <a href="https://t.me/donioscode" target="_blank"><i class="fab fa-telegram"></i></a>
                 </div>
             </div>
         </div>
@@ -869,13 +1073,13 @@
 
     <section id="contact">
         <h2 id="contact-title">Mahsus tarif</h2>
-        <p style="color: #fff;    font-size: 18px;
+        <p id="contact-desc" style="color: #fff;    font-size: 18px;
             line-height: 1.8;
             max-width: 800px;
             margin: 20px auto;
-            animation: fadeIn 2s ease-in-out;">Mahsulot nomi, miqdori va kategoriyani kiriting – sizga mos narxlarni
+            animation: fadeIn 2s ease-in-out;">Barcha maydonlarni to`ldiring va sizga mos narxlarni
             taqdim etamiz!</p>
-        <form id="data-form">
+        <form action="#" id="data-form">
             <!-- Do'kon nomi -->
             <input type="text" placeholder="Do'kon nomi" id="store" required>
 
@@ -910,18 +1114,18 @@
         const isSubmitted = localStorage.getItem('isSubmitted') === 'true';
         const submissionTime = localStorage.getItem('submissionTime');
 
-        document.getElementById('data-form').addEventListener('submit', function(event) {
-            if (submissionTime && (Date.now() - submissionTime > 3600000)) {
+        document.getElementById('data-form').addEventListener('submit', function (event) {
+            if (submissionTime && (Date.now() - submissionTime > 600)) {
                 localStorage.setItem('isSubmitted', 'false'); // Bayroqni false ga o'zgartirish
                 localStorage.removeItem('submissionTime'); // Vaqtni o'chirish
             }
             console.log(localStorage.getItem('isSubmitted'), "nimadir");
-            if (localStorage.getItem('isSubmitted') == null){
+            if (localStorage.getItem('isSubmitted') == null) {
                 console.log("nimadir");
                 const submissionTime = localStorage.getItem('submissionTime');
                 localStorage.setItem('isSubmitted', 'false')
             }
-            
+
             const isSubmitted = localStorage.getItem('isSubmitted') === 'true';
             event.preventDefault(); // Formani yuborishni to'xtatish
 
@@ -939,13 +1143,13 @@
             const sellerCount = document.getElementById('seller-count').value;
             const categoryCount = document.getElementById('category-count').value;
             const productCount = document.getElementById('product-count').value;
-            
+
             if (phone.length < 8 || isNaN(phone)) {
                 alert('Telefon raqami kamida 8 ta raqamdan iborat bo\'lishi kerak.');
                 return; // Funktsiyani to'xtatish
             }
             // Telegram API ga yuboriladigan xabar
-            const message = `<b>MAHSUS TARIF UCHUN ARIZA</b>\n\n🏬 <b>Do'kon nomi:</b> ${store}\n🙍🏻‍♂️ <b>Familiya, ism, sharif:</b> ${name}\n📞 <b>Telefon raqam:</b> ${phone}\n📅 <b>Yosh:</b> ${age}\n🤵🏻 <b>Adminlar soni:</b> ${managerCount}\n🤵🏻 <b>Sotuvchilar soni:</b> ${sellerCount}\n📋 <b>Kategoriyalar soni:</b> ${categoryCount}\n📦 <b>Mahsulotlar soni:</b> ${productCount}`;
+            const message = `<b>MAHSUS TARIF UCHUN ARIZA</b>\n\n🏬 <b>Do'kon nomi:</b> ${store} \n🙍🏻‍♂️ <b>Familiya, ism, sharif:</b> ${name} \n📞 <b>Telefon raqam:</b> ${phone} \n📅 <b>Yosh:</b> ${age} \n🤵🏻 <b>Adminlar soni:</b> ${managerCount} \n🤵🏻 <b>Sotuvchilar soni:</b> ${sellerCount} \n📋 <b>Kategoriyalar soni:</b> ${categoryCount} \n📦 <b>Mahsulotlar soni:</b> ${productCount}`;
 
             // Telegram API ga so'rov yuborish
             fetch(`https://api.telegram.org/bot7497550725:AAET05RjIqyWcabkKM81-wIUq7Lx_XP3UwE/sendMessage`, {
@@ -959,45 +1163,147 @@
                     parse_mode: 'HTML'
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Success:', data);
-                alert('Ma\'lumot yuborildi!');
-                localStorage.setItem('isSubmitted', 'true');
-                localStorage.setItem('submissionTime', Date.now());
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                alert('Xatolik yuz berdi!');
-            });
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                    alert('Ma\'lumot yuborildi!');
+                    localStorage.setItem('isSubmitted', 'true');
+                    localStorage.setItem('submissionTime', Date.now());
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    alert('Xatolik yuz berdi!');
+                });
         });
+
 
         const translations = {
             uz: {
-                title: "StarClaud",
-                nav: ["Bosh sahifa", "Xususiyatlar", "Haqida", "Bog'lanish"],
-                home: ["StarClaudga xush kelibsiz", "Star Claud – bu do‘kon boshqaruvi uchun qulay va zamonaviy yechim bo‘lib, moliyaviy ko‘rsatkichlarni kuzatish, mahsulotlarni sotish yoki arendaga berish, ishchilar faoliyatini tahlil qilish va boshqarish imkoniyatlarini taqdim etadi."],
+                title: "Star Claud",
+                nav: ["Bosh sahifa", "Xususiyatlar", "Haqida", "Tariflar", "Bog'lanish"],
+                home: ["Star Claudga Xush Kelibsiz"],
                 features: ["Bizning xususiyatlarimiz", "Moliyaviy Tahlil", "Kunlik, haftalik, oylik va yillik daromadlarni kuzating. Statistikalarda foyda va xarajatlar haqida to‘liq ma’lumotga ega bo‘ling.", "Mahsulot va Arenda", "Mahsulotlarni sotish yoki arendaga berish jarayonlarini oson boshqaring. Arenda shartlarini moslashtiring va daromadni oshiring.", "Ishchi Fa oliyatini Kuzatish", "Ishchilaringizning oyligi, KPI statistikasi va sotuvlar hajmini real vaqt rejimida kuzating.",],
-                about: ["Biz haqimizda",],
-                contact: ["Mahsus tarif", "Do'kon nomi", "Familiya, ism, sharif", "Telefon raqamizni kiriting", "Yoshingiz", "Menejerlar soni", "Sotuvchilar soni", "Mahsulotlar soni", "Ma'lumotni yuborish"]
+                about: ["Biz haqimizda"],
+                tariff: ["StarClaud Tariflari", "Bizning moslashuvchan tariflarimizni tanlang"],
+                contact: ["Mahsus tarif", "Barcha maydonlarni toldiring va sizga mos narxlarni taqdim etamiz!", "Do'kon nomi", "Familiya, ism, sharif", "Telefon raqamizni kiriting", "Yoshingiz", "Menejerlar soni", "Sotuvchilar soni", "Mahsulotlar soni", "Ma'lumotni yuborish"]
             },
             en: {
-                title: "StarClaud",
-                nav: ["Home", "Features", "About", "Contact"],
-                home: ["Welcome to StarClaud", "Star Claud is a convenient and modern solution for store management that provides opportunities to monitor financial performance, sell or rent products, analyze and manage employee activities."],
+                title: "Star Claud",
+                nav: ["Home", "Features", "About", "Tariffs", "Contact"],
+                home: ["Welcome to Star Cloud"],
                 features: ["Our Features", "Financial Analysis", "Track daily, weekly, monthly, and yearly income. Get detailed information about profits and expenses in the statistics.", "Products and Rentals", "Easily manage product sales or rental processes. Customize rental terms and increase revenue.", "Employee Activity Monitoring", "Monitor your employees' salaries, KPI statistics, and sales volume in real time."],
                 about: ["About Us"],
-                contact: ["Special rate", "Store Name", "Surname, first name, first name", "Enter your phone number", "Your Age", "Number of Managers", "Number of Sellers", "Number of Categories", "Number of Products", "Submit Information"]
+                tariff: ["StarClaud Tariffs", "Choose our flexible tariff"],
+                contact: ["Special rate", "Fill in all the fields, and we will provide you with the best prices!", "Store Name", "Surname, first name, first name", "Enter your phone number", "Your Age", "Number of Managers", "Number of Sellers", "Number of Categories", "Number of Products", "Submit Information"]
             },
             ru: {
-                title: "СтарКлауд",
-                nav: ["Главная", "Функции", "О нас", "Контакты"],
-                home: ["Добро пожаловать в СтарКлауд", "Star Claud – это удобное и современное решение для управления магазином, предоставляющее возможности для отслеживания финансовых показателей, продажи или аренды товаров, анализа и управления деятельностью сотрудников."],
-                features: ["Наши функции", "Финансовый анализ", "Отслеживайте ежедневный, еженедельный, ежемесячный и годовой доход. Получайте подробную информацию о прибыли и расходах.", "Товары и аренда", "Управляйте продажей или сдачей товаров в аренду. Настраивайте условия аренды и увеличивайте доход.", "Мониторинг деятельности сотрудников", "Мониторинг деятельности сотрудников",],
+                title: "Star Claud",
+                nav: ["Главная", "Функции", "О нас", "Tарифы", "Контакты"],
+                home: ["Добро пожаловать в Star Cloud"],
+                features: ["Наши функции", "Финансовый анализ", "Отслеживайте ежедневный, еженедельный, ежемесячный и годовой доход. Получайте подробную информацию о прибыли и расходах.", "Товары и аренда", "Управляйте продажей или сдачей товаров в аренду. Настраивайте условия аренды и увеличивайте доход.", "Мониторинг деятельности сотрудников", "Отслеживайте зарплаты ваших сотрудников, статистику KPI и объем продаж в режиме реального времени."],
                 about: ["О нас"],
-                contact: ["Специальный тариф", "Название магазина", "Фамилия, имя, Отчества", "Введите свой номер телефона", "Ваш возраст", "Количество менеджеров", "Количество продавцов", "Количество категорий", "Количество продуктов", "Отправить информацию"]
+                tariff: ["StarClaud Тарифы", "Выберите наш гибкий тариф"],
+                contact: ["Специальный тариф", "Заполните все поля, и мы предложим вам подходящие цены!", "Название магазина", "Фамилия, имя, Отчества", "Введите свой номер телефона", "Ваш возраст", "Количество менеджеров", "Количество продавцов", "Количество категорий", "Количество продуктов", "Отправить информацию"]
             }
         };
+        let images = [
+            {
+                src: "https://i.postimg.cc/gJ5dsmcs/Group-7465.png",
+                title: {
+                    uz: "Login Qismi",
+                    en: "Login Section",
+                    ru: "Раздел входа"
+                },
+                desc: {
+                    uz: "Login qismi bo‘lib, foydalanuvchilar tizimga kirish imkoniyatini beradi. Kirish uchun foydalanuvchi nomi va parolni kiritish talab qilinadi.",
+                    en: "The login section allows users to log into the system. To log in, the username and password are required.",
+                    ru: "Раздел входа позволяет пользователям войти в систему. Для входа требуется ввести имя пользователя и пароль."
+                }
+            },
+            {
+                src: "https://i.postimg.cc/T2LW6PbR/Group-7466.png",
+                title: {
+                    uz: "Bosh Panel",
+                    en: "Main Panel",
+                    ru: "Основная панель"
+                },
+                desc: {
+                    uz: "Bosh panelda do‘konning asosiy funksiyalari, mahsulotlar kategoriyasi, arenda va sotuvlar boshqaruvi ko‘rsatilgan.",
+                    en: "The main panel shows the store's main functions, product categories, rental and sales management.",
+                    ru: "Основная панель показывает основные функции магазина, категории продуктов, управление арендой и продажами."
+                }
+            },
+            {
+                src: "https://i.postimg.cc/x1YkMy4C/Group-7462.png",
+                title: {
+                    uz: "Qidiruv Qismi",
+                    en: "Search Section",
+                    ru: "Раздел поиска"
+                },
+                desc: {
+                    uz: "Mahsulotlarni qidirish imkoniyatiga ega bo‘lasiz. Foydalanuvchilar kategoriyalar bo‘yicha qidiruv qilishlari mumkin.",
+                    en: "You can search for products. Users can search by categories.",
+                    ru: "Вы можете искать продукты. Пользователи могут искать по категориям."
+                }
+            },
+            {
+                src: "https://i.postimg.cc/hGZfFFPz/Group-7464.png",
+                title: {
+                    uz: "Direktor Paneli",
+                    en: "Director Panel",
+                    ru: "Панель директора"
+                },
+                desc: {
+                    uz: "Direktor paneli statistikalar, mahsulotlar, sotilganlar va arendaga berilganlar bo‘yicha muhim ma'lumotlarni taqdim etadi.",
+                    en: "The director's panel provides important information about statistics, products, sold items, and rentals.",
+                    ru: "Панель директора предоставляет важную информацию о статистике, продуктах, проданных товарах и аренде."
+                }
+            },
+            {
+                src: "https://i.postimg.cc/GtG2sHPG/Group-7460.png",
+                title: {
+                    uz: "Statistika Bo‘limi",
+                    en: "Statistics Section",
+                    ru: "Раздел статистики"
+                },
+                desc: {
+                    uz: "Statistikada kunlik, haftalik, oylik va yillik daromadlarni ko‘rish mumkin. Shu bilan birga, eng ko‘p sotilgan va eng kam sotilgan mahsulotlar ko‘rsatiladi.",
+                    en: "In statistics, you can view daily, weekly, monthly, and yearly income. The best-selling and least-selling products are also displayed.",
+                    ru: "В разделе статистики можно просматривать ежедневный, еженедельный, ежемесячный и ежегодный доход. Также показываются самые продаваемые и наименее продаваемые товары."
+                }
+            },
+            {
+                src: "https://i.postimg.cc/xTG8fN1S/Group-7463.png",
+                title: {
+                    uz: "Menejer Paneli",
+                    en: "Manager Panel",
+                    ru: "Панель менеджера"
+                },
+                desc: {
+                    uz: "Menejerlar oylik hisoboti, sotilgan mahsulotlar va arendaga berilgan mahsulotlar haqida ma'lumotlarni ko‘rishi mumkin.",
+                    en: "Managers can view monthly reports, sold products, and rented products.",
+                    ru: "Менеджеры могут просматривать ежемесячные отчеты, проданные товары и товары в аренде."
+                }
+            },
+            {
+                src: "https://i.postimg.cc/zfvGFdSJ/Group-7461.png",
+                title: {
+                    uz: "Sotuvchi Paneli",
+                    en: "Seller Panel",
+                    ru: "Панель продавца"
+                },
+                desc: {
+                    uz: "Sotuvchilar oylik hisoboti, sotilgan va arendaga berilgan mahsulotlar haqida ma'lumotlarni olishlari mumkin.",
+                    en: "Sellers can receive monthly reports and information about sold and rented products.",
+                    ru: "Продавцы могут получать ежемесячные отчеты и информацию о проданных и арендованных товарах."
+                }
+            }
+        ];
+
+        let currentIndex = 0;
+        const slider = document.getElementById("home-slider");
+        const title = document.getElementById("home-text-title");
+        const description = document.getElementById("home-desc");
 
         const selectElement = document.getElementById('language-select');
         const dropdownIcon = document.getElementById('dropdown-icon');
@@ -1005,6 +1311,42 @@
         const hamburger = document.getElementById("hamburger");
         const mobileMenu = document.getElementById("mobile-menu");
         const closeMenu = document.getElementById("close-menu");
+
+        function changeImage(next = true) {
+            slider.style.opacity = 0; // Rasm yo'qoladi
+            setTimeout(() => {
+                currentIndex = next
+                    ? (currentIndex + 1) % images.length
+                    : (currentIndex - 1 + images.length) % images.length;
+
+                slider.src = images[currentIndex].src; // Yangi rasm yuklanadi
+                title.textContent = images[currentIndex].title[selectElement.value]; // Yangi sarloxa tilga mos
+                description.textContent = images[currentIndex].desc[selectElement.value]; // Yangi izoh tilga mos
+
+                slider.style.opacity = 1; // Yangi rasm paydo bo‘ladi
+            }, 500);
+        }
+
+        function startInterval() {
+            // Eski intervalni to'xtatish
+            if (slideInterval) {
+                clearInterval(slideInterval);
+            }
+            // Yangi intervalni boshlash
+            slideInterval = setInterval(() => changeImage(true), 10000);
+        }
+
+        setInterval(() => changeImage(true), 10000); // Har 10 sekundda rasm o‘zgaradi
+
+        function nextSlide() {
+            changeImage(true);
+            startInterval(); // Intervallni qayta boshlash
+        }
+
+        function prevSlide() {
+            changeImage(false);
+            startInterval(); // Intervallni qayta boshlash
+        }
 
         // Hamburger menyuni ochish
         hamburger.addEventListener("click", () => {
@@ -1026,6 +1368,7 @@
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const iconPath = selectedOption.getAttribute('data-icon');
             dropdownIcon.src = iconPath; // Gerbni almashtirish
+            changeImage(true); // Til o'zgarganda rasmni yangilash
         });
 
         // Tilni o'zgartirish funksiyasi
@@ -1035,9 +1378,9 @@
             document.getElementById("nav-home").innerText = t.nav[0];
             document.getElementById("nav-features").innerText = t.nav[1];
             document.getElementById("nav-about").innerText = t.nav[2];
-            document.getElementById("nav-contact").innerText = t.nav[3];
+            document.getElementById("nav-tariffs").innerText = t.nav[3];
+            document.getElementById("nav-contact").innerText = t.nav[4];
             document.getElementById("home-title").innerText = t.home[0];
-            document.getElementById("home-desc").innerText = t.home[1];
             document.getElementById("features-title").innerText = t.features[0];
             document.getElementById("feature1-title").innerText = t.features[1];
             document.getElementById("feature1-desc").innerText = t.features[2];
@@ -1046,16 +1389,23 @@
             document.getElementById("feature3-title").innerText = t.features[5];
             document.getElementById("feature3-desc").innerText = t.features[6];
             document.getElementById("about-title").innerText = t.about[0];
+            document.getElementById("tariffs-title").innerText = t.tariff[0];
+            document.getElementById("tariffs-desc").innerText = t.tariff[1];
             document.getElementById("contact-title").innerText = t.contact[0];
-            document.getElementById("store").placeholder = t.contact[1];
-            document.getElementById("name").placeholder = t.contact[2];
-            document.getElementById("phone").placeholder = t.contact[3];
-            document.getElementById("age").placeholder = t.contact[4];
-            document.getElementById("manager-count").placeholder = t.contact[5];
-            document.getElementById("seller-count").placeholder = t.contact[6];
-            document.getElementById("category-count").placeholder = t.contact[7];
-            document.getElementById("product-count").placeholder = t.contact[8];
-            document.getElementById("contact-submit").innerText = t.contact[9];
+            document.getElementById("contact-desc").innerText = t.contact[1];
+            document.getElementById("store").placeholder = t.contact[2];
+            document.getElementById("name").placeholder = t.contact[3];
+            document.getElementById("phone").placeholder = t.contact[4];
+            document.getElementById("age").placeholder = t.contact[5];
+            document.getElementById("manager-count").placeholder = t.contact[6];
+            document.getElementById("seller-count").placeholder = t.contact[7];
+            document.getElementById("category-count").placeholder = t.contact[8];
+            document.getElementById("product-count").placeholder = t.contact[9];
+            document.getElementById("contact-submit").innerText = t.contact[10];
+            images.forEach((image, index) => {
+                document.getElementById(`home-text-title`).innerText = image.title[lang];
+                document.getElementById(`home-desc`).innerText = image.desc[lang];
+            });
         }
 
         const prices = {
@@ -1082,6 +1432,7 @@
         function updatePrice(tariff, duration) {
             document.getElementById(`price-${tariff}`).innerText = prices[tariff][duration];
         }
+
     </script>
 </body>
 
