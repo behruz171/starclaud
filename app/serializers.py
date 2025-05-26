@@ -219,7 +219,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'price', 'status', 
                   'lend_count', 'seller', 'admin', 'created_at', 
                   'category', 'category_name', 'img', 'choice', 
-                  'rental_price', 'location', 'quantity', 'weight']
+                  'rental_price', 'location', 'quantity', 'weight', 'scan_code']
         read_only_fields = ['status', 'lend_count', 'created_at', 'seller', 'admin']
 
     def validate(self, attrs):

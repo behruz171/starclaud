@@ -165,6 +165,7 @@ class Product(BaseModel):
     location = models.CharField(max_length=255, blank=True, null=True)
     quantity = models.PositiveIntegerField(default=0, blank=True, null=True)
     weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    scan_code = models.CharField(max_length=300, blank=True, null=True)
 
     class Meta:
         ordering = ['-created_at']

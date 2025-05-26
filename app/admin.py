@@ -94,7 +94,7 @@ class ProductAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (None, {'fields': ('name', 'description', 'price', 'status', 'created_by', 'admin', 'lend_count', 'category')}),
-        ('Product Details', {'fields': ('img', 'choice', 'rental_price', 'location', 'quantity', 'weight')}),
+        ('Product Details', {'fields': ('img', 'choice', 'rental_price', 'location', 'quantity', 'weight', 'scan_code')}),
     )
     
     def get_queryset(self, request):

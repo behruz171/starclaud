@@ -152,6 +152,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
         price_from = self.request.query_params.get('from', None)  # URL dan from parametrini olish
         price_to = self.request.query_params.get('to', None)  # URL dan to parametrini olish
         count_filter = self.request.query_params.get('count', None)  # URL dan count parametrini olish
+        scan_code = self.request.query_params.get('scan_code', None) # URL dan scan code parametrini olish
 
 
 
@@ -167,6 +168,9 @@ class ProductListCreateView(generics.ListCreateAPIView):
                 Q(created_by=user) | 
                 Q(admin=user.created_by)
             )  # SELLER o'z mahsulotlarini va admin tomonidan yaratilgan mahsulotlarni ko'radi
+        
+        if scan_code:
+            queryset = queryset.filter(scan_code=scan_code)
 
         if status_filter:
             queryset = queryset.filter(status=status_filter)  # Status bo'yicha filtr qo'shish
@@ -732,6 +736,13 @@ class SellerStatisticsView(generics.RetrieveAPIView):
 class SaleViewSet(viewsets.ModelViewSet):
     serializer_class = SaleSerializer
     permission_classes = [IsAuthenticated]
+
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, many=False)
+        serializer.is_valid(raise_exception=True)
+        sales = serializer.save()
+        return Response(SaleSerializer(sales, many=True).data, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):
         user = self.request.user
