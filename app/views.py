@@ -2053,3 +2053,84 @@ class TariffRetrieveView(generics.RetrieveAPIView):
         if not tariff:
             raise exceptions.NotFound("No active tariff found for this director.")
         return tariff
+
+
+
+class CartView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        cart, created = Cart.objects.get_or_create(seller=request.user)
+        serializer = CartSerializer(cart)
+        return Response(serializer.data)
+
+class CartAddItemView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        cart, created = Cart.objects.get_or_create(seller=request.user)
+        product_id = request.data.get('product_id')
+        quantity = int(request.data.get('quantity', 1))
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({"error": "Mahsulot topilmadi"}, status=404)
+        item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+        if not created:
+            item.quantity += quantity
+        else:
+            item.quantity = quantity
+        item.save()
+        return Response({"success": True, "message": "Mahsulot korzinkaga qo'shildi"})
+
+class CartCheckoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        cart = Cart.objects.filter(seller=request.user).first()
+        if not cart or not cart.items.exists():
+            return Response({"error": "Korzinka bo'sh"}, status=400)
+        buyer = request.data.get('buyer', '')
+        sales = []
+        total_price = 0
+        for item in cart.items.all():
+            sale = Sale.objects.create(
+                product=item.product,
+                seller=request.user,
+                buyer=buyer,
+                sale_price=item.product.price * item.quantity,
+                quantity=item.quantity,
+                status='COMPLETED'
+            )
+            sales.append({
+                "product_id": item.product.id,
+                "product_name": item.product.name,
+                "quantity": item.quantity,
+                "sale_price": str(sale.sale_price)
+            })
+            total_price += sale.sale_price
+        cart.items.all().delete()  # Korzinkani tozalash
+        return Response({
+            "success": True,
+            "message": "Sotuv muvaffaqiyatli amalga oshirildi",
+            "sales": sales,
+            "total_price": str(total_price)
+        })
+
+class SoldProductsHistoryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        sales = Sale.objects.filter(seller=request.user).order_by('-sale_date')
+        result = []
+        for sale in sales:
+            result.append({
+                "date": sale.sale_date.date(),
+                "buyer": sale.buyer,
+                "product_id": sale.product.id,
+                "product_name": sale.product.name,
+                "product_category": sale.product.category.name if sale.product.category else None,
+                "product_price": str(sale.sale_price),
+                "product_quantity": sale.quantity,
+            })
+        return Response(result)

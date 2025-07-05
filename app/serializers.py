@@ -497,3 +497,26 @@ class TariffDetailSerializer(serializers.ModelSerializer):
         return Product.objects.filter(admin=obj.user).count()
     def get_category_count_now(self, obj):
         return Category.objects.filter(created_by=obj.user).count()
+
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_img = serializers.ImageField(source='product.img', read_only=True)
+    product_category = serializers.CharField(source='product.category.name', read_only=True)
+    product_price = serializers.DecimalField(source='product.price', max_digits=25, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'product', 'product_name', 'product_img', 'product_category', 'product_price', 'quantity']
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    total_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Cart
+        fields = ['id', 'seller', 'created_at', 'items', 'total_price']
+
+    def get_total_price(self, obj):
+        return sum([item.product.price * item.quantity for item in obj.items.all()])

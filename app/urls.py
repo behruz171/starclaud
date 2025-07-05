@@ -54,4 +54,9 @@ urlpatterns = [
     # Tariff lar uchun API lar
     path('tariffs/', views.TariffCreateView.as_view(), name='tariff-create'),
     path('tariff/', views.TariffRetrieveView.as_view(), name='tariff-retrieve'),
+
+    path('cart/', views.CartView.as_view(), name='cart'),
+    path('cart/add/', views.CartAddItemView.as_view(), name='cart-add'),
+    path('cart/checkout/', views.CartCheckoutView.as_view(), name='cart-checkout'),
+    path('cart/sold/', views.SoldProductsHistoryView.as_view(), name='cart-sold'),
 ] 
