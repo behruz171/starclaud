@@ -520,3 +520,10 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_total_price(self, obj):
         return sum([item.product.price * item.quantity for item in obj.items.all()])
+
+
+class CashWithdrawalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CashWithdrawal
+        fields = ['id', 'seller', 'amount', 'comment', 'created_at']
+        read_only_fields = ['id', 'seller', 'created_at']

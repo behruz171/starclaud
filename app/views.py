@@ -11,7 +11,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import *
 from .serializers import *
-from django.db.models import Q
+from django.db.models import Q, Avg
 from django.utils import timezone
 from django.db.models import Sum, F, Case, When, FloatField, Value, DecimalField, ExpressionWrapper, Count, IntegerField
 from django.db.models.functions import Cast, Replace, Coalesce
@@ -19,7 +19,7 @@ from collections import defaultdict
 from decimal import Decimal
 import pytz
 import calendar
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -2133,4 +2133,537 @@ class SoldProductsHistoryView(APIView):
                 "product_price": str(sale.sale_price),
                 "product_quantity": sale.quantity,
             })
+        return Response(result)
+
+
+class CashWithdrawalView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = CashWithdrawalSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(seller=request.user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+    def get(self, request):
+        withdrawals = CashWithdrawal.objects.filter(seller=request.user).order_by('-created_at')
+        serializer = CashWithdrawalSerializer(withdrawals, many=True)
+        return Response(serializer.data)
+
+
+def calculate_growth(current, previous):
+    if previous == 0:
+        return "+0%"
+    growth = ((current - previous) / previous) * 100
+    sign = "+" if growth >= 0 else ""
+    return f"{sign}{growth:.1f}%"
+
+
+class StatisticsReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        period = request.GET.get('period')  # 'day', 'week', 'month', 'year'
+
+        sales = Sale.objects.all()
+        lendings = Lending.objects.all()
+        withdrawals = CashWithdrawal.objects.all()
+
+        now = timezone.now()
+
+        # Sana bo‘yicha filter
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d")
+                end = datetime.strptime(end_date, "%Y-%m-%d")
+                sales = sales.filter(sale_date__date__gte=start, sale_date__date__lte=end)
+                lendings = lendings.filter(borrow_date__date__gte=start, borrow_date__date__lte=end)
+                withdrawals = withdrawals.filter(created_at__date__gte=start, created_at__date__lte=end)
+            except Exception:
+                pass
+
+        # Period bo‘yicha filter va oldingi davrni aniqlash
+        if period == "year":
+            current_year = now.year
+            prev_year = current_year - 1
+            sales_current = sales.filter(sale_date__year=current_year)
+            sales_prev = sales.filter(sale_date__year=prev_year)
+            lendings_current = lendings.filter(borrow_date__year=current_year)
+            lendings_prev = lendings.filter(borrow_date__year=prev_year)
+            withdrawals_current = withdrawals.filter(created_at__year=current_year)
+            withdrawals_prev = withdrawals.filter(created_at__year=prev_year)
+        elif period == "month":
+            current_year = now.year
+            current_month = now.month
+            if current_month == 1:
+                prev_month = 12
+                prev_year = current_year - 1
+            else:
+                prev_month = current_month - 1
+                prev_year = current_year
+            sales_current = sales.filter(sale_date__year=current_year, sale_date__month=current_month)
+            sales_prev = sales.filter(sale_date__year=prev_year, sale_date__month=prev_month)
+            lendings_current = lendings.filter(borrow_date__year=current_year, borrow_date__month=current_month)
+            lendings_prev = lendings.filter(borrow_date__year=prev_year, borrow_date__month=prev_month)
+            withdrawals_current = withdrawals.filter(created_at__year=current_year, created_at__month=current_month)
+            withdrawals_prev = withdrawals.filter(created_at__year=prev_year, created_at__month=prev_month)
+        elif period == "week":
+            current_week = now.isocalendar()[1]
+            current_year = now.year
+            prev_week = current_week - 1 if current_week > 1 else 52
+            prev_year = current_year if current_week > 1 else current_year - 1
+            sales_current = sales.filter(sale_date__isocalendar__week=current_week, sale_date__year=current_year)
+            sales_prev = sales.filter(sale_date__isocalendar__week=prev_week, sale_date__year=prev_year)
+            lendings_current = lendings.filter(borrow_date__isocalendar__week=current_week, borrow_date__year=current_year)
+            lendings_prev = lendings.filter(borrow_date__isocalendar__week=prev_week, borrow_date__year=prev_year)
+            withdrawals_current = withdrawals.filter(created_at__isocalendar__week=current_week, created_at__year=current_year)
+            withdrawals_prev = withdrawals.filter(created_at__isocalendar__week=prev_week, created_at__year=prev_year)
+        elif period == "day":
+            today = now.date()
+            yesterday = today - timezone.timedelta(days=1)
+            sales_current = sales.filter(sale_date__date=today)
+            sales_prev = sales.filter(sale_date__date=yesterday)
+            lendings_current = lendings.filter(borrow_date__date=today)
+            lendings_prev = lendings.filter(borrow_date__date=yesterday)
+            withdrawals_current = withdrawals.filter(created_at__date=today)
+            withdrawals_prev = withdrawals.filter(created_at__date=yesterday)
+        else:
+            # Default: umumiy
+            sales_current = sales
+            sales_prev = sales.none()
+            lendings_current = lendings
+            lendings_prev = lendings.none()
+            withdrawals_current = withdrawals
+            withdrawals_prev = withdrawals.none()
+
+        # Statistika hisoblash
+        total_revenue = sales_current.aggregate(total=Sum('sale_price'))['total'] or 0
+        total_revenue_prev = sales_prev.aggregate(total=Sum('sale_price'))['total'] or 0
+
+        lending_revenue = lendings_current.aggregate(total=Sum('product__rental_price'))['total'] or 0
+        lending_revenue_prev = lendings_prev.aggregate(total=Sum('product__rental_price'))['total'] or 0
+
+        total_expense = withdrawals_current.aggregate(total=Sum('amount'))['total'] or 0
+        total_expense_prev = withdrawals_prev.aggregate(total=Sum('amount'))['total'] or 0
+
+        net_profit = total_revenue + lending_revenue - total_expense
+        net_profit_prev = (total_revenue_prev + lending_revenue_prev) - total_expense_prev
+
+        # O‘sish foizlarini hisoblash
+        sales_growth = calculate_growth(total_revenue, total_revenue_prev)
+        lending_growth = calculate_growth(lending_revenue, lending_revenue_prev)
+        profit_growth = calculate_growth(net_profit, net_profit_prev)
+        expense_growth = calculate_growth(total_expense, total_expense_prev)
+        total_growth = calculate_growth(total_revenue + lending_revenue, total_revenue_prev + lending_revenue_prev)
+
+        data = {
+            "total_revenue": total_revenue,
+            "sales_revenue": total_revenue,
+            "lending_revenue": lending_revenue,
+            "total_expense": total_expense,
+            "net_profit": net_profit,
+            "growth": {
+                "total": total_growth,
+                "sales": sales_growth,
+                "lending": lending_growth,
+                "profit": profit_growth,
+                "expense": expense_growth
+            }
+        }
+        return Response(data)
+
+
+class IncomeExpenseDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Filterlar
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        sales = Sale.objects.all()
+        lendings = Lending.objects.all()
+        withdrawals = CashWithdrawal.objects.all()
+
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d")
+                end = datetime.strptime(end_date, "%Y-%m-%d")
+                sales = sales.filter(sale_date__date__gte=start, sale_date__date__lte=end)
+                lendings = lendings.filter(borrow_date__date__gte=start, borrow_date__date__lte=end)
+                withdrawals = withdrawals.filter(created_at__date__gte=start, created_at__date__lte=end)
+            except Exception:
+                pass
+
+        # Kirim tafsilotlari
+        sales_income = sales.aggregate(total=Sum('sale_price'))['total'] or 0
+        lending_income = lendings.aggregate(total=Sum('product__rental_price'))['total'] or 0
+        other_income = 0  # Agar boshqa daromadlar bo'lsa, shu yerda hisoblang
+
+        # Chiqim tafsilotlari
+        def get_expense_sum(comment):
+            return withdrawals.filter(comment__iexact=comment).aggregate(total=Sum('amount'))['total'] or 0
+
+        expense_details = {
+            "Xodimlar maoshi": get_expense_sum("Xodimlar maoshi"),
+            "Ijara haqi": get_expense_sum("Ijara haqi"),
+            "Kommunal xizmatlar": get_expense_sum("Kommunal xizmatlar"),
+            "Marketing": get_expense_sum("Marketing"),
+            "Ta'mirlash": get_expense_sum("Ta'mirlash"),
+            "Boshqa xarajatlar": withdrawals.exclude(
+                comment__in=[
+                    "Xodimlar maoshi", "Ijara haqi", "Kommunal xizmatlar", "Marketing", "Ta'mirlash"
+                ]
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        }
+
+        data = {
+            "income_detail": {
+                "sales_income": sales_income,
+                "lending_income": lending_income,
+                "other_income": other_income
+            },
+            "expense_detail": expense_details
+        }
+        return Response(data)
+
+
+
+class IncomeExpenseDynamicsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        period = request.GET.get('period', 'month')  # 'year', 'month', 'week', 'day'
+        year = int(request.GET.get('year', timezone.now().year))
+
+        sales = Sale.objects.all()
+        lendings = Lending.objects.all()
+        withdrawals = CashWithdrawal.objects.all()
+
+        result = []
+
+        if period == 'year':
+            # Har bir yil uchun
+            start_year = year - 4  # oxirgi 5 yil
+            for y in range(start_year, year + 1):
+                sales_sum = sales.filter(sale_date__year=y).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__year=y).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                expense_sum = withdrawals.filter(created_at__year=y).aggregate(total=Sum('amount'))['total'] or 0
+                net_profit = sales_sum + lending_sum - expense_sum
+                result.append({
+                    "label": str(y),
+                    "income": sales_sum + lending_sum,
+                    "expense": expense_sum,
+                    "net_profit": net_profit
+                })
+        elif period == 'month':
+            # 12 oy uchun
+            for m in range(1, 13):
+                sales_sum = sales.filter(sale_date__year=year, sale_date__month=m).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__year=year, borrow_date__month=m).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                expense_sum = withdrawals.filter(created_at__year=year, created_at__month=m).aggregate(total=Sum('amount'))['total'] or 0
+                net_profit = sales_sum + lending_sum - expense_sum
+                result.append({
+                    "label": datetime(year, m, 1).strftime('%b'),  # 'Yan', 'Fev', ...
+                    "income": sales_sum + lending_sum,
+                    "expense": expense_sum,
+                    "net_profit": net_profit
+                })
+        elif period == 'week':
+            # 1 yil ichidagi 52 hafta uchun
+            for w in range(1, 53):
+                sales_sum = sales.filter(sale_date__year=year, sale_date__week=w).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__year=year, borrow_date__week=w).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                expense_sum = withdrawals.filter(created_at__year=year, created_at__week=w).aggregate(total=Sum('amount'))['total'] or 0
+                net_profit = sales_sum + lending_sum - expense_sum
+                result.append({
+                    "label": f"{w}-hafta",
+                    "income": sales_sum + lending_sum,
+                    "expense": expense_sum,
+                    "net_profit": net_profit
+                })
+        elif period == 'day':
+            # Oxirgi 30 kun uchun
+            today = timezone.now().date()
+            for i in range(29, -1, -1):
+                d = today - timedelta(days=i)
+                sales_sum = sales.filter(sale_date__date=d).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__date=d).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                expense_sum = withdrawals.filter(created_at__date=d).aggregate(total=Sum('amount'))['total'] or 0
+                net_profit = sales_sum + lending_sum - expense_sum
+                result.append({
+                    "label": d.strftime('%d-%b'),
+                    "income": sales_sum + lending_sum,
+                    "expense": expense_sum,
+                    "net_profit": net_profit
+                })
+        else:
+            return Response({"error": "period noto'g'ri"}, status=400)
+
+        return Response(result)
+
+
+class RevenueDynamicsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        period = request.GET.get('period', 'month')  # 'year', 'month', 'week', 'day'
+        year = int(request.GET.get('year', timezone.now().year))
+
+        sales = Sale.objects.all()
+        lendings = Lending.objects.all()
+        result = []
+
+        if period == 'year':
+            start_year = year - 4
+            for y in range(start_year, year + 1):
+                sales_sum = sales.filter(sale_date__year=y).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__year=y).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                result.append({
+                    "label": str(y),
+                    "total_revenue": sales_sum + lending_sum,
+                    "sales_revenue": sales_sum,
+                    "lending_revenue": lending_sum
+                })
+        elif period == 'month':
+            for m in range(1, 13):
+                sales_sum = sales.filter(sale_date__year=year, sale_date__month=m).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__year=year, borrow_date__month=m).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                result.append({
+                    "label": datetime(year, m, 1).strftime('%b'),
+                    "total_revenue": sales_sum + lending_sum,
+                    "sales_revenue": sales_sum,
+                    "lending_revenue": lending_sum
+                })
+        elif period == 'week':
+            for w in range(1, 53):
+                sales_sum = sales.filter(sale_date__year=year, sale_date__week=w).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__year=year, borrow_date__week=w).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                result.append({
+                    "label": f"{w}-hafta",
+                    "total_revenue": sales_sum + lending_sum,
+                    "sales_revenue": sales_sum,
+                    "lending_revenue": lending_sum
+                })
+        elif period == 'day':
+            today = timezone.now().date()
+            for i in range(29, -1, -1):
+                d = today - timedelta(days=i)
+                sales_sum = sales.filter(sale_date__date=d).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__date=d).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                result.append({
+                    "label": d.strftime('%d-%b'),
+                    "total_revenue": sales_sum + lending_sum,
+                    "sales_revenue": sales_sum,
+                    "lending_revenue": lending_sum
+                })
+        else:
+            return Response({"error": "period noto'g'ri"}, status=400)
+
+        return Response(result)
+
+
+class CategorySalesShareView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        year = int(request.GET.get('year', timezone.now().year))
+        month = request.GET.get('month', None)
+
+        # Faqat yil va oy bo‘yicha filter
+        products = Product.objects.all()
+        if month:
+            products = products.filter(created_at__year=year, created_at__month=int(month))
+        else:
+            products = products.filter(created_at__year=year)
+
+        total_products = products.count() or 1  # 0 bo‘lsa, 1 qilib olamiz, bo‘linishda xatolik bo‘lmasin
+
+        category_data = (
+            products.values('category__name')
+            .annotate(product_count=Count('id'))
+            .order_by('-product_count')
+        )
+
+        result = []
+        for item in category_data:
+            percent = round(item['product_count'] * 100 / total_products, 2)
+            result.append({
+                "category": item['category__name'] or "Boshqalar",
+                "product_count": item['product_count'],
+                "percent": percent
+            })
+
+        return Response(result)
+
+
+
+class TopSoldProductsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        year = int(request.GET.get('year', timezone.now().year))
+        month = request.GET.get('month', None)
+
+        sales = Sale.objects.all()
+        if month:
+            sales = sales.filter(sale_date__year=year, sale_date__month=int(month))
+        else:
+            sales = sales.filter(sale_date__year=year)
+
+        # Har bir product uchun sotilgan soni va jami summa
+        product_data = (
+            sales.values('product', 'product__name', 'product__category__name')
+            .annotate(
+                sold_count=Count('id'),
+                total_income=Sum('sale_price')
+            )
+            .order_by('-sold_count', '-total_income')[:10]
+        )
+
+        # Har bir product uchun arenda sonini ham hisoblash
+        product_ids = [item['product'] for item in product_data]
+        lending_counts = dict(
+            Lending.objects.filter(product_id__in=product_ids)
+            .values('product')
+            .annotate(lend_count=Count('id'))
+            .values_list('product', 'lend_count')
+        )
+
+        result = []
+        for item in product_data:
+            result.append({
+                "product_id": item['product'],
+                "name": item['product__name'],
+                "category": item['product__category__name'],
+                "sold_count": item['sold_count'],
+                "lend_count": lending_counts.get(item['product'], 0),
+                "total_income": item['total_income'],
+                "profit": item['total_income'],  # Agar foyda alohida bo‘lsa, shu yerda hisoblang
+            })
+        return Response(result)
+
+
+class TopLendedProductsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        year = int(request.GET.get('year', timezone.now().year))
+        month = request.GET.get('month', None)
+
+        lendings = Lending.objects.all()
+        if month:
+            lendings = lendings.filter(borrow_date__year=year, borrow_date__month=int(month))
+        else:
+            lendings = lendings.filter(borrow_date__year=year)
+
+        # Har bir product uchun arenda soni va jami summa
+
+        product_data = (
+            lendings.values('product', 'product__name', 'product__category__name')
+            .annotate(
+                lend_count=Count('id'),
+                total_income=Sum('product__rental_price'),
+                # avg_days=Avg('days')  # Agar days maydoni bo‘lsa
+            )
+            .order_by('-lend_count', '-total_income')[:10]
+        )
+
+        # Har bir product uchun sotilgan sonini ham hisoblash
+        product_ids = [item['product'] for item in product_data]
+        sales_counts = dict(
+            Sale.objects.filter(product_id__in=product_ids)
+            .values('product')
+            .annotate(sold_count=Count('id'))
+            .values_list('product', 'sold_count')
+        )
+
+        result = []
+        for item in product_data:
+            result.append({
+                "product_id": item['product'],
+                "name": item['product__name'],
+                "category": item['product__category__name'],
+                "lend_count": item['lend_count'],
+                "sold_count": sales_counts.get(item['product'], 0),
+                "total_income": item['total_income'],
+                # "avg_days": item['avg_days'] or 0,
+                "profit": item['total_income'],  # Agar foyda alohida bo‘lsa, shu yerda hisoblang
+            })
+        return Response(result)
+
+
+
+class EmployeeStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Faqat direktor va admin uchun
+        user = request.user
+        if user.role not in [User.DIRECTOR, User.ADMIN]:
+            return Response({"error": "Ruxsat yo'q"}, status=403)
+
+        # Hodimlar ro'yxati
+        if user.role == User.DIRECTOR:
+            employees = User.objects.filter(created_by=user, role=User.SELLER)
+        else:
+            employees = User.objects.filter(created_by=user.created_by, role=User.SELLER)
+
+        year = int(request.GET.get('year', timezone.now().year))
+        month = int(request.GET.get('month', timezone.now().month))
+
+        start_date = datetime(year, month, 1)
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = datetime(year, month, last_day, 23, 59, 59)
+
+        result = []
+        for emp in employees:
+            # Sotish soni va daromadi
+            sales = Sale.objects.filter(
+                seller=emp,
+                sale_date__range=(start_date, end_date)
+            )
+            sales_count = sales.count()
+            sales_income = sales.aggregate(total=Sum('sale_price'))['total'] or 0
+
+            # Arenda soni va daromadi
+            lendings = Lending.objects.filter(
+                seller=emp,
+                borrow_date__range=(start_date, end_date)
+            )
+            lending_count = lendings.count()
+            lending_income = lendings.aggregate(total=Sum('product__rental_price'))['total'] or 0
+
+            # Komissiya (KPI)
+            kpi = emp.KPI or 0
+            sales_kpi = sales.aggregate(
+                total=Sum(
+                    ExpressionWrapper(
+                        F('sale_price') * F('quantity') * kpi / 100,
+                        output_field=DecimalField()
+                    )
+                )
+            )['total'] or 0
+
+            lending_kpi = lendings.aggregate(
+                total=Sum(
+                    ExpressionWrapper(
+                        F('product__rental_price') * kpi / 100,
+                        output_field=DecimalField()
+                    )
+                )
+            )['total'] or 0
+
+            result.append({
+                "username": emp.username,
+                "full_name": emp.get_full_name() if hasattr(emp, 'get_full_name') else emp.first_name + " " + emp.last_name,
+                "sales_count": sales_count,
+                "lending_count": lending_count,
+                "commission": sales_kpi + lending_kpi,
+                "income": sales_income + lending_income
+            })
+
         return Response(result)

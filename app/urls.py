@@ -59,4 +59,14 @@ urlpatterns = [
     path('cart/add/', views.CartAddItemView.as_view(), name='cart-add'),
     path('cart/checkout/', views.CartCheckoutView.as_view(), name='cart-checkout'),
     path('cart/sold/', views.SoldProductsHistoryView.as_view(), name='cart-sold'),
+    path('cash/withdraw/',views.CashWithdrawalView.as_view(), name='cash-withdraw'),
+
+    path('statistics/report/', views.StatisticsReportView.as_view(), name='statistics-report'),
+    path('statistics/income-expense/', views.IncomeExpenseDetailView.as_view(), name='income-expense-detail'),
+    path('statistics/dynamics/', views.IncomeExpenseDynamicsView.as_view(), name='income-expense-dynamics'),
+    path('statistics/revenue-dynamics/', views.RevenueDynamicsView.as_view(), name='revenue-dynamics'),
+    path('statistics/category-sales-share/', views.CategorySalesShareView.as_view(), name='category-sales-share'),
+    path('statistics/top-sold-products/', views.TopSoldProductsView.as_view(), name='top-sold-products'),
+    path('statistics/top-lended-products/', views.TopLendedProductsView.as_view(), name='top-lended-products'),
+    path('statistics/employee/', views.EmployeeStatisticsView.as_view(), name='employee-statistics'),
 ] 
