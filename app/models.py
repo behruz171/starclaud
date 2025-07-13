@@ -287,6 +287,11 @@ class Sale(BaseModel):
         ('CANCELLED', 'Cancelled'),
     ]
 
+    PAYMENT_TYPE_CHOICES = [
+        ('CASH', 'Naqd'),
+        ('CARD', 'Karta'),
+    ]
+
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='sales')
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sales')
     buyer = models.CharField(max_length=100)
@@ -295,6 +300,7 @@ class Sale(BaseModel):
     quantity = models.PositiveIntegerField(null=True, blank=True)
     product_weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='CASH')
     reason_cancelled = models.CharField(max_length=200, null=True, blank=True)
 
     class Meta:

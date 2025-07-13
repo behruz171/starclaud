@@ -402,7 +402,7 @@ class SaleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sale
-        fields = ['id',"product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status", 'product_weight', 'reason_cancelled']
+        fields = ['id',"product", "product_detail", "buyer", "sale_price", "sale_date", "quantity", "status", 'product_weight', 'reason_cancelled', 'payment_type']
     
     id = serializers.IntegerField(read_only=True)
 

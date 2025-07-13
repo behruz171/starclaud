@@ -2688,6 +2688,7 @@ class CartBulkCheckoutView(APIView):
 
     def post(self, request):
         buyer = request.data.get('buyer', '')
+        payment_type = request.data.get('payment_type', 'CASH')  # Yangi maydon
         items = request.data.get('items', [])
         if not items or not isinstance(items, list):
             return Response({"error": "Mahsulotlar ro'yxati noto'g'ri"}, status=400)
@@ -2706,13 +2707,15 @@ class CartBulkCheckoutView(APIView):
                 buyer=buyer,
                 sale_price=product.price * quantity,
                 quantity=quantity,
-                status='COMPLETED'
+                status='COMPLETED',
+                payment_type=payment_type  # Qo‘shildi
             )
             sales.append({
                 "product_id": product.id,
                 "product_name": product.name,
                 "quantity": quantity,
-                "sale_price": str(sale.sale_price)
+                "sale_price": str(sale.sale_price),
+                "payment_type": sale.payment_type
             })
             total_price += sale.sale_price
         return Response({
