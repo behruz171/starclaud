@@ -2667,3 +2667,57 @@ class EmployeeStatisticsView(APIView):
             })
 
         return Response(result)
+
+
+class CartItemDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, item_id):
+        try:
+            cart_item = CartItem.objects.get(id=item_id, cart__seller=request.user)
+        except CartItem.DoesNotExist:
+            return Response({"error": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        cart_item.delete()
+        return Response({"success": "Cart item deleted successfully."}, status=status.HTTP_200_OK)
+    
+
+
+class CartBulkCheckoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        buyer = request.data.get('buyer', '')
+        items = request.data.get('items', [])
+        if not items or not isinstance(items, list):
+            return Response({"error": "Mahsulotlar ro'yxati noto'g'ri"}, status=400)
+        sales = []
+        total_price = 0
+        for item in items:
+            product_id = item.get('product_id')
+            quantity = item.get('quantity', 1)
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                return Response({"error": f"Mahsulot topilmadi: {product_id}"}, status=404)
+            sale = Sale.objects.create(
+                product=product,
+                seller=request.user,
+                buyer=buyer,
+                sale_price=product.price * quantity,
+                quantity=quantity,
+                status='COMPLETED'
+            )
+            sales.append({
+                "product_id": product.id,
+                "product_name": product.name,
+                "quantity": quantity,
+                "sale_price": str(sale.sale_price)
+            })
+            total_price += sale.sale_price
+        return Response({
+            "success": True,
+            "message": "Barcha mahsulotlar sotildi",
+            "sales": sales,
+            "total_price": str(total_price)
+        })

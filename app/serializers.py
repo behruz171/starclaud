@@ -502,13 +502,14 @@ class TariffDetailSerializer(serializers.ModelSerializer):
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    product_quantity = serializers.CharField(source='product.quantity', read_only=True)
     product_img = serializers.ImageField(source='product.img', read_only=True)
     product_category = serializers.CharField(source='product.category.name', read_only=True)
     product_price = serializers.DecimalField(source='product.price', max_digits=25, decimal_places=2, read_only=True)
 
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'product_name', 'product_img', 'product_category', 'product_price', 'quantity']
+        fields = ['id', 'product', 'product_name', 'product_img', 'product_category', 'product_price', 'product_quantity', 'quantity']
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
@@ -519,7 +520,11 @@ class CartSerializer(serializers.ModelSerializer):
         fields = ['id', 'seller', 'created_at', 'items', 'total_price']
 
     def get_total_price(self, obj):
-        return sum([item.product.price * item.quantity for item in obj.items.all()])
+        total = 0
+        for item in obj.items.all():
+            price = item.product.price if item.product.price is not None else 0
+            total += price * item.quantity
+        return total
 
 
 class CashWithdrawalSerializer(serializers.ModelSerializer):

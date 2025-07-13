@@ -58,7 +58,9 @@ urlpatterns = [
     path('cart/', views.CartView.as_view(), name='cart'),
     path('cart/add/', views.CartAddItemView.as_view(), name='cart-add'),
     path('cart/checkout/', views.CartCheckoutView.as_view(), name='cart-checkout'),
+    path('cart/bulk_checkout/', views.CartBulkCheckoutView.as_view(), name='cart-bulk-checkout'),
     path('cart/sold/', views.SoldProductsHistoryView.as_view(), name='cart-sold'),
+    path('cart/delete/<int:item_id>/', views.CartItemDeleteView.as_view(), name='cart-item-delete'),
     path('cash/withdraw/',views.CashWithdrawalView.as_view(), name='cash-withdraw'),
 
     path('statistics/report/', views.StatisticsReportView.as_view(), name='statistics-report'),
