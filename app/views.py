@@ -176,7 +176,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(status=status_filter)  # Status bo'yicha filtr qo'shish
         
         if category is not None:
-            queryset = queryset.filter(category__name=category)  # category bo'yicha filtr
+            queryset = queryset.filter(category=category)  # category bo'yicha filtr
         if name is not None:
             queryset = queryset.filter(name__icontains=name.strip('"')) # category bo'yicha filtr
         
