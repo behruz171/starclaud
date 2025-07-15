@@ -2688,36 +2688,65 @@ class CartBulkCheckoutView(APIView):
 
     def post(self, request):
         buyer = request.data.get('buyer', '')
-        payment_type = request.data.get('payment_type', 'CASH')  # Yangi maydon
+        payment_type = request.data.get('payment_type', 'CASH')
         items = request.data.get('items', [])
         if not items or not isinstance(items, list):
             return Response({"error": "Mahsulotlar ro'yxati noto'g'ri"}, status=400)
         sales = []
-        total_price = 0
+        total_price = Decimal('0')
         for item in items:
             product_id = item.get('product_id')
-            quantity = item.get('quantity', 1)
+            quantity = item.get('quantity')
+            weight = item.get('weight')
             try:
                 product = Product.objects.get(id=product_id)
             except Product.DoesNotExist:
                 return Response({"error": f"Mahsulot topilmadi: {product_id}"}, status=404)
-            sale = Sale.objects.create(
-                product=product,
-                seller=request.user,
-                buyer=buyer,
-                sale_price=product.price * quantity,
-                quantity=quantity,
-                status='COMPLETED',
-                payment_type=payment_type  # Qo‘shildi
-            )
-            sales.append({
-                "product_id": product.id,
-                "product_name": product.name,
-                "quantity": quantity,
-                "sale_price": str(sale.sale_price),
-                "payment_type": sale.payment_type
-            })
-            total_price += sale.sale_price
+
+            # Narxni hisoblash
+            if weight is not None:
+                # float emas, Decimal ishlatamiz
+                weight_decimal = Decimal(str(weight))
+                sale_price = product.price * weight_decimal
+                sale = Sale.objects.create(
+                    product=product,
+                    seller=request.user,
+                    buyer=buyer,
+                    sale_price=sale_price,
+                    quantity=None,
+                    product_weight=weight_decimal,
+                    status='COMPLETED',
+                    payment_type=payment_type
+                )
+                sales.append({
+                    "product_id": product.id,
+                    "product_name": product.name,
+                    "weight": float(weight_decimal),
+                    "sale_price": str(sale.sale_price),
+                    "payment_type": sale.payment_type
+                })
+                total_price += sale_price
+            else:
+                quantity = int(quantity) if quantity is not None else 1
+                sale_price = product.price * quantity
+                sale = Sale.objects.create(
+                    product=product,
+                    seller=request.user,
+                    buyer=buyer,
+                    sale_price=sale_price,
+                    quantity=quantity,
+                    status='COMPLETED',
+                    payment_type=payment_type
+                )
+                sales.append({
+                    "product_id": product.id,
+                    "product_name": product.name,
+                    "quantity": quantity,
+                    "sale_price": str(sale.sale_price),
+                    "payment_type": sale.payment_type
+                })
+                total_price += sale_price
+
         return Response({
             "success": True,
             "message": "Barcha mahsulotlar sotildi",
