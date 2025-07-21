@@ -19,6 +19,7 @@ urlpatterns = [
     path('products/<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
     path('products/<int:pk>/status/', views.ProductStatusUpdateView.as_view(), name='product-status'),
 
+    path('sales/cancel/', views.SaleCancelBulkView.as_view(), name='sale-cancel-bulk'),
     # Lending URL s
     path('', include(router.urls)),
 

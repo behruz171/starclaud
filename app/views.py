@@ -20,6 +20,8 @@ from decimal import Decimal
 import pytz
 import calendar
 from datetime import datetime, timedelta
+from .pagination import *
+import re
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -2121,19 +2123,38 @@ class SoldProductsHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        sales = Sale.objects.filter(seller=request.user).order_by('-sale_date')
-        result = []
+        sales = Sale.objects.filter(seller=request.user, status='COMPLETED').order_by('-sale_date')
+        buyer_map = {}
         for sale in sales:
-            result.append({
+            buyer = sale.buyer or "Noma'lum"
+            item = {
+                "id": sale.id,
                 "date": sale.sale_date.date(),
-                "buyer": sale.buyer,
                 "product_id": sale.product.id,
+                "product_image": sale.product.img.url if sale.product.img else None,
                 "product_name": sale.product.name,
                 "product_category": sale.product.category.name if sale.product.category else None,
                 "product_price": str(sale.sale_price),
                 "product_quantity": sale.quantity,
-            })
-        return Response(result)
+                "total_price": str(sale.sale_price * sale.quantity),
+            }
+            if buyer not in buyer_map:
+                buyer_map[buyer] = {
+                    "buyer": buyer,
+                    "item": [item],
+                    "total_price": str(sale.sale_price * sale.quantity),
+                    "payment_type": sale.payment_type if hasattr(sale, "payment_type") else None
+                }
+            else:
+                buyer_map[buyer]["item"].append(item)
+                prev_total = Decimal(buyer_map[buyer]["total_price"])
+                buyer_map[buyer]["total_price"] = str(prev_total + (sale.sale_price * sale.quantity))
+        result = list(buyer_map.values())
+
+        # Pagination
+        paginator = DefaultPagination()
+        page = paginator.paginate_queryset(result, request)
+        return paginator.get_paginated_response(page)
 
 
 class CashWithdrawalView(APIView):
@@ -2692,6 +2713,20 @@ class CartBulkCheckoutView(APIView):
         items = request.data.get('items', [])
         if not items or not isinstance(items, list):
             return Response({"error": "Mahsulotlar ro'yxati noto'g'ri"}, status=400)
+
+        # Faqat shu user va shu buyer uchun oldingi tartib raqamlarni topamiz
+        pattern = re.compile(rf"^{re.escape(buyer)}-(\d+)$")
+        all_buyers = Sale.objects.filter(seller=request.user, buyer__startswith=buyer + "-").values_list('buyer', flat=True)
+        max_number = 0
+        for b in all_buyers:
+            match = pattern.match(b)
+            if match:
+                num = int(match.group(1))
+                if num > max_number:
+                    max_number = num
+        tartib_raqam = max_number + 1
+        unique_buyer = f"{buyer}-{tartib_raqam}"
+
         sales = []
         total_price = Decimal('0')
         for item in items:
@@ -2703,15 +2738,13 @@ class CartBulkCheckoutView(APIView):
             except Product.DoesNotExist:
                 return Response({"error": f"Mahsulot topilmadi: {product_id}"}, status=404)
 
-            # Narxni hisoblash
             if weight is not None:
-                # float emas, Decimal ishlatamiz
                 weight_decimal = Decimal(str(weight))
                 sale_price = product.price * weight_decimal
                 sale = Sale.objects.create(
                     product=product,
                     seller=request.user,
-                    buyer=buyer,
+                    buyer=unique_buyer,
                     sale_price=sale_price,
                     quantity=None,
                     product_weight=weight_decimal,
@@ -2732,7 +2765,7 @@ class CartBulkCheckoutView(APIView):
                 sale = Sale.objects.create(
                     product=product,
                     seller=request.user,
-                    buyer=buyer,
+                    buyer=unique_buyer,
                     sale_price=sale_price,
                     quantity=quantity,
                     status='COMPLETED',
@@ -2753,3 +2786,30 @@ class CartBulkCheckoutView(APIView):
             "sales": sales,
             "total_price": str(total_price)
         })
+
+
+
+class SaleCancelBulkView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        sale_ids = request.data.get('ids', [])
+        reason_cancelled = request.data.get('reason_cancelled', '')
+        if not sale_ids or not isinstance(sale_ids, list):
+            return Response({"error": "ids ro'yxati yuboring"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        updated = 0
+        for sale_id in sale_ids:
+            try:
+                sale = Sale.objects.get(id=sale_id, seller=request.user)
+                sale.status = 'CANCELLED'
+                sale.reason_cancelled = reason_cancelled
+                sale.save()
+                updated += 1
+            except Sale.DoesNotExist:
+                continue  # Topilmasa, o'tkazib yuboriladi
+
+        return Response({
+            "success": True,
+            "updated_count": updated
+        }, status=status.HTTP_200_OK)
