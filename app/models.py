@@ -174,7 +174,7 @@ class Product(BaseModel):
         return f"{self.name} ({self.get_status_display()})"
     
     def save(self,*args, **kwargs):
-        if not self.quantity and not self.weight:
+        if (self.quantity is None or self.quantity < 0) and (self.weight is None or self.weight < 0):
             raise ValidationError("Quantity yoki Product Weight dan biri kiritilishi shart.")
         if self.quantity and self.weight:
             raise ValidationError("Faqat Quantity yoki Product Weight dan birini kiriting, ikkalasini emas.")
@@ -311,9 +311,8 @@ class Sale(BaseModel):
 
     def save(self, *args, **kwargs):
         # Mahsulotning mavjud miqdorini tekshirish
-        if not self.quantity and not self.product_weight:
+        if (self.quantity is None or self.quantity == 0) and (self.product_weight is None or self.product_weight == 0):
             raise ValidationError("Quantity yoki Product Weight dan biri kiritilishi shart.")
-        
         if self.quantity and self.product_weight:
             raise ValidationError("Faqat Quantity yoki Product Weight dan birini kiriting, ikkalasini emas.")
 
@@ -345,11 +344,11 @@ class Sale(BaseModel):
         else:
             old_quantity = 0
             old_weight = 0
-        
+
         if not self.pk:  # Yangi ob'ekt
-            if self.quantity:
+            if self.quantity is not None:
                 self.product.quantity -= self.quantity
-            elif self.product_weight:
+            elif self.product_weight is not None:
                 self.product.weight -= Decimal(self.product_weight)
         else:  # Yangilanish
             if self.status == 'CANCELLED' and old_instance.status != 'CANCELLED':
@@ -360,12 +359,11 @@ class Sale(BaseModel):
                     self.product.weight += Decimal(old_weight)
             elif self.status != 'CANCELLED' and old_instance.status == 'CANCELLED':
                 # Cancel'dan qayta sotilishga o'tgan bo'lsa
-                if self.quantity:
+                if self.quantity is not None:
                     self.product.quantity -= self.quantity
-                elif self.product_weight:
+                elif self.product_weight is not None:
                     self.product.weight -= Decimal(self.product_weight)
 
-        # Mahsulotni saqlash
         self.product.save()
         super().save(*args, **kwargs)
 
