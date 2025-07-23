@@ -2236,12 +2236,12 @@ class StatisticsReportView(APIView):
             current_year = now.year
             prev_week = current_week - 1 if current_week > 1 else 52
             prev_year = current_year if current_week > 1 else current_year - 1
-            sales_current = sales.filter(sale_date__isocalendar__week=current_week, sale_date__year=current_year)
-            sales_prev = sales.filter(sale_date__isocalendar__week=prev_week, sale_date__year=prev_year)
-            lendings_current = lendings.filter(borrow_date__isocalendar__week=current_week, borrow_date__year=current_year)
-            lendings_prev = lendings.filter(borrow_date__isocalendar__week=prev_week, borrow_date__year=prev_year)
-            withdrawals_current = withdrawals.filter(created_at__isocalendar__week=current_week, created_at__year=current_year)
-            withdrawals_prev = withdrawals.filter(created_at__isocalendar__week=prev_week, created_at__year=prev_year)
+            sales_current = sales.filter(sale_date__week=current_week, sale_date__year=current_year)
+            sales_prev = sales.filter(sale_date__week=prev_week, sale_date__year=prev_year)
+            lendings_current = lendings.filter(borrow_date__week=current_week, borrow_date__year=current_year)
+            lendings_prev = lendings.filter(borrow_date__week=prev_week, borrow_date__year=prev_year)
+            withdrawals_current = withdrawals.filter(created_at__week=current_week, created_at__year=current_year)
+            withdrawals_prev = withdrawals.filter(created_at__week=prev_week, created_at__year=prev_year)
         elif period == "day":
             today = now.date()
             yesterday = today - timezone.timedelta(days=1)
@@ -2394,29 +2394,35 @@ class IncomeExpenseDynamicsView(APIView):
                     "net_profit": net_profit
                 })
         elif period == 'week':
-            # 1 yil ichidagi 52 hafta uchun
-            for w in range(1, 53):
-                sales_sum = sales.filter(sale_date__year=year, sale_date__week=w).aggregate(total=Sum('sale_price'))['total'] or 0
-                lending_sum = lendings.filter(borrow_date__year=year, borrow_date__week=w).aggregate(total=Sum('product__rental_price'))['total'] or 0
-                expense_sum = withdrawals.filter(created_at__year=year, created_at__week=w).aggregate(total=Sum('amount'))['total'] or 0
+            # Joriy haftaning boshidan oxirigacha kunlar bo‘yicha
+            now = timezone.now()
+            start_of_week = now - timezone.timedelta(days=now.weekday())  # Dushanba
+            result = []
+            for i in range(7):  # 0 - 6 (Dushanba - Yakshanba)
+                day = start_of_week + timezone.timedelta(days=i)
+                sales_sum = sales.filter(sale_date__date=day.date()).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__date=day.date()).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                expense_sum = withdrawals.filter(created_at__date=day.date()).aggregate(total=Sum('amount'))['total'] or 0
                 net_profit = sales_sum + lending_sum - expense_sum
                 result.append({
-                    "label": f"{w}-hafta",
+                    "label": day.strftime('%A'),  # Kun nomi: Monday, Tuesday, ...
                     "income": sales_sum + lending_sum,
                     "expense": expense_sum,
                     "net_profit": net_profit
                 })
         elif period == 'day':
-            # Oxirgi 30 kun uchun
+            # Bugungi kunning har bir soati uchun (00:00 dan 23:00 gacha)
             today = timezone.now().date()
-            for i in range(29, -1, -1):
-                d = today - timedelta(days=i)
-                sales_sum = sales.filter(sale_date__date=d).aggregate(total=Sum('sale_price'))['total'] or 0
-                lending_sum = lendings.filter(borrow_date__date=d).aggregate(total=Sum('product__rental_price'))['total'] or 0
-                expense_sum = withdrawals.filter(created_at__date=d).aggregate(total=Sum('amount'))['total'] or 0
+            result = []
+            for hour in range(0, 24):
+                start_time = datetime.combine(today, datetime.min.time()) + timedelta(hours=hour)
+                end_time = start_time + timedelta(hours=1)
+                sales_sum = sales.filter(sale_date__range=(start_time, end_time)).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__range=(start_time, end_time)).aggregate(total=Sum('product__rental_price'))['total'] or 0
+                expense_sum = withdrawals.filter(created_at__range=(start_time, end_time)).aggregate(total=Sum('amount'))['total'] or 0
                 net_profit = sales_sum + lending_sum - expense_sum
                 result.append({
-                    "label": d.strftime('%d-%b'),
+                    "label": f"{start_time.strftime('%H:%M')}-{end_time.strftime('%H:%M')}",
                     "income": sales_sum + lending_sum,
                     "expense": expense_sum,
                     "net_profit": net_profit
@@ -2460,23 +2466,31 @@ class RevenueDynamicsView(APIView):
                     "lending_revenue": lending_sum
                 })
         elif period == 'week':
-            for w in range(1, 53):
-                sales_sum = sales.filter(sale_date__year=year, sale_date__week=w).aggregate(total=Sum('sale_price'))['total'] or 0
-                lending_sum = lendings.filter(borrow_date__year=year, borrow_date__week=w).aggregate(total=Sum('product__rental_price'))['total'] or 0
+            # Joriy haftaning boshidan oxirigacha kunlar bo‘yicha
+            now = timezone.now()
+            start_of_week = now - timezone.timedelta(days=now.weekday())  # Dushanba
+            result = []
+            for i in range(7):  # 0 - 6 (Dushanba - Yakshanba)
+                day = start_of_week + timezone.timedelta(days=i)
+                sales_sum = sales.filter(sale_date__date=day.date()).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__date=day.date()).aggregate(total=Sum('product__rental_price'))['total'] or 0
                 result.append({
-                    "label": f"{w}-hafta",
+                    "label": day.strftime('%A'),  # Kun nomi: Monday, Tuesday, ...
                     "total_revenue": sales_sum + lending_sum,
                     "sales_revenue": sales_sum,
                     "lending_revenue": lending_sum
                 })
         elif period == 'day':
+            # Bugungi kunning har bir soati uchun (00:00 dan 23:00 gacha)
             today = timezone.now().date()
-            for i in range(29, -1, -1):
-                d = today - timedelta(days=i)
-                sales_sum = sales.filter(sale_date__date=d).aggregate(total=Sum('sale_price'))['total'] or 0
-                lending_sum = lendings.filter(borrow_date__date=d).aggregate(total=Sum('product__rental_price'))['total'] or 0
+            result = []
+            for hour in range(0, 24):
+                start_time = datetime.combine(today, datetime.min.time()) + timedelta(hours=hour)
+                end_time = start_time + timedelta(hours=1)
+                sales_sum = sales.filter(sale_date__range=(start_time, end_time)).aggregate(total=Sum('sale_price'))['total'] or 0
+                lending_sum = lendings.filter(borrow_date__range=(start_time, end_time)).aggregate(total=Sum('product__rental_price'))['total'] or 0
                 result.append({
-                    "label": d.strftime('%d-%b'),
+                    "label": f"{start_time.strftime('%H:%M')}-{end_time.strftime('%H:%M')}",
                     "total_revenue": sales_sum + lending_sum,
                     "sales_revenue": sales_sum,
                     "lending_revenue": lending_sum
