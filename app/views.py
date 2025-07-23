@@ -2752,8 +2752,33 @@ class CartBulkCheckoutView(APIView):
             except Product.DoesNotExist:
                 return Response({"error": f"Mahsulot topilmadi: {product_id}"}, status=404)
 
-            if weight is not None:
+            # Mavjud miqdorni tekshirish
+            if quantity is not None:
+                quantity = int(quantity)
+                if not product.quantity or product.quantity < quantity:
+                    return Response({"error": f"{product.name} mahsulotining yetarli soni yo'q."}, status=400)
+                sale_price = product.price * quantity
+                sale = Sale.objects.create(
+                    product=product,
+                    seller=request.user,
+                    buyer=unique_buyer,
+                    sale_price=sale_price,
+                    quantity=quantity,
+                    status='COMPLETED',
+                    payment_type=payment_type
+                )
+                sales.append({
+                    "product_id": product.id,
+                    "product_name": product.name,
+                    "quantity": quantity,
+                    "sale_price": str(sale.sale_price),
+                    "payment_type": sale.payment_type
+                })
+                total_price += sale_price
+            elif weight is not None:
                 weight_decimal = Decimal(str(weight))
+                if not product.weight or product.weight < weight_decimal:
+                    return Response({"error": f"{product.name} mahsulotining yetarli og'irligi yo'q."}, status=400)
                 sale_price = product.price * weight_decimal
                 sale = Sale.objects.create(
                     product=product,
@@ -2774,25 +2799,8 @@ class CartBulkCheckoutView(APIView):
                 })
                 total_price += sale_price
             else:
-                quantity = int(quantity) if quantity is not None else 1
-                sale_price = product.price * quantity
-                sale = Sale.objects.create(
-                    product=product,
-                    seller=request.user,
-                    buyer=unique_buyer,
-                    sale_price=sale_price,
-                    quantity=quantity,
-                    status='COMPLETED',
-                    payment_type=payment_type
-                )
-                sales.append({
-                    "product_id": product.id,
-                    "product_name": product.name,
-                    "quantity": quantity,
-                    "sale_price": str(sale.sale_price),
-                    "payment_type": sale.payment_type
-                })
-                total_price += sale_price
+                return Response({"error": f"{product.name} uchun quantity yoki weight kiritilishi shart."}, status=400)
+            
 
         return Response({
             "success": True,
