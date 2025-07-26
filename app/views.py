@@ -2127,6 +2127,17 @@ class SoldProductsHistoryView(APIView):
         buyer_map = {}
         for sale in sales:
             buyer = sale.buyer or "Noma'lum"
+            # To'g'ri total_price hisoblash: quantity yoki product_weight bo'yicha
+            if sale.quantity is not None:
+                total_price = sale.sale_price * sale.quantity
+                product_quantity = sale.quantity
+            elif sale.product_weight is not None:
+                total_price = sale.sale_price * sale.product_weight
+                product_quantity = None
+            else:
+                total_price = sale.sale_price
+                product_quantity = None
+
             item = {
                 "id": sale.id,
                 "date": sale.sale_date.date(),
@@ -2135,20 +2146,20 @@ class SoldProductsHistoryView(APIView):
                 "product_name": sale.product.name,
                 "product_category": sale.product.category.name if sale.product.category else None,
                 "product_price": str(sale.sale_price),
-                "product_quantity": sale.quantity,
-                "total_price": str(sale.sale_price * sale.quantity),
+                "product_quantity": product_quantity,
+                "total_price": str(total_price),
             }
             if buyer not in buyer_map:
                 buyer_map[buyer] = {
                     "buyer": buyer,
                     "item": [item],
-                    "total_price": str(sale.sale_price * sale.quantity),
+                    "total_price": str(total_price),
                     "payment_type": sale.payment_type if hasattr(sale, "payment_type") else None
                 }
             else:
                 buyer_map[buyer]["item"].append(item)
                 prev_total = Decimal(buyer_map[buyer]["total_price"])
-                buyer_map[buyer]["total_price"] = str(prev_total + (sale.sale_price * sale.quantity))
+                buyer_map[buyer]["total_price"] = str(prev_total + total_price)
         result = list(buyer_map.values())
 
         # Pagination
