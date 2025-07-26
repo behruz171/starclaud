@@ -2752,9 +2752,15 @@ class CartBulkCheckoutView(APIView):
             except Product.DoesNotExist:
                 return Response({"error": f"Mahsulot topilmadi: {product_id}"}, status=404)
 
-            # Mavjud miqdorni tekshirish
+            # Narx va quantity/weight None emasligini tekshirish
+            if product.price is None:
+                return Response({"error": f"{product.name} mahsulotining narxi kiritilmagan."}, status=400)
+
             if quantity is not None:
-                quantity = int(quantity)
+                try:
+                    quantity = int(quantity)
+                except Exception:
+                    return Response({"error": f"{product.name} uchun quantity noto'g'ri."}, status=400)
                 if not product.quantity or product.quantity < quantity:
                     return Response({"error": f"{product.name} mahsulotining yetarli soni yo'q."}, status=400)
                 sale_price = product.price * quantity
@@ -2776,7 +2782,10 @@ class CartBulkCheckoutView(APIView):
                 })
                 total_price += sale_price
             elif weight is not None:
-                weight_decimal = Decimal(str(weight))
+                try:
+                    weight_decimal = Decimal(str(weight))
+                except Exception:
+                    return Response({"error": f"{product.name} uchun weight noto'g'ri."}, status=400)
                 if not product.weight or product.weight < weight_decimal:
                     return Response({"error": f"{product.name} mahsulotining yetarli og'irligi yo'q."}, status=400)
                 sale_price = product.price * weight_decimal
@@ -2800,7 +2809,6 @@ class CartBulkCheckoutView(APIView):
                 total_price += sale_price
             else:
                 return Response({"error": f"{product.name} uchun quantity yoki weight kiritilishi shart."}, status=400)
-            
 
         return Response({
             "success": True,
